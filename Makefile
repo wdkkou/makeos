@@ -13,10 +13,10 @@ asmhead.bin : asmhead.asm Makefile
 	nasm asmhead.asm -o asmhead.bin -l asmhead.lst
 
 nasmfunc.o : nasmfunc.asm Makefile
-	nasm -g -f elf nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
+	nasm -g -f elf32 nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
 
-bootpack.hrb : bootpack.c har.ld nasmfunc.o Makefile
-	gcc -march=i486 -m32 -nostdlib -T har.ld -g bootpack.c nasmfunc.o -o bootpack.hrb
+bootpack.hrb : bootpack.c har.ls nasmfunc.o Makefile
+	gcc -m32 -nostdlib -fno-pic -T har.ls -g bootpack.c nasmfunc.o -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
@@ -47,3 +47,8 @@ clean :
 	rm *.sys
 	rm *.img
 	rm *.hrb
+	rm *.o
+
+debug:
+	make img
+	qemu-system-i386 -fda haribote.img -gdb tcp::100000 -S

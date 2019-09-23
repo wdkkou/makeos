@@ -1,4 +1,3 @@
-/* https://vanya.jp.net/os/haribote.html#hrb */
 OUTPUT_FORMAT("binary");
 
 SECTIONS

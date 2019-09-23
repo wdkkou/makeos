@@ -16,7 +16,7 @@ nasmfunc.o : nasmfunc.asm Makefile
 	nasm -g -f elf32 nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
 
 bootpack.hrb : bootpack.c har.ls nasmfunc.o Makefile
-	gcc -m32 -nostdlib -T har.ls -g bootpack.c nasmfunc.o -o bootpack.hrb
+	gcc -m32 -nostdlib -fno-pic -T har.ls -g bootpack.c nasmfunc.o -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys

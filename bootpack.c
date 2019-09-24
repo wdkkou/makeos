@@ -41,7 +41,7 @@ void HariMain(void)
     xsize = 320;
     ysize = 200;
 
-    boxfill8(vram, xsize, COL8_008484, 0, 0, xsize - 1, ysize - 29);
+    boxfill8(vram, xsize, COL8_008400, 0, 0, xsize - 1, ysize - 29);
     boxfill8(vram, xsize, COL8_C6C6C6, 0, ysize - 28, xsize - 1, ysize - 28);
     boxfill8(vram, xsize, COL8_FFFFFF, 0, ysize - 27, xsize - 1, ysize - 27);
     boxfill8(vram, xsize, COL8_C6C6C6, 0, ysize - 26, xsize - 1, ysize - 1);

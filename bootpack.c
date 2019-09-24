@@ -37,29 +37,17 @@ struct BOOTINFO
 void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)0xff0;
-    static char font_a[16] = {
-        0x00,
-        0x18,
-        0x18,
-        0x18,
-        0x18,
-        0x24,
-        0x24,
-        0x24,
-        0x24,
-        0x7e,
-        0x42,
-        0x42,
-        0x42,
-        0xe7,
-        0x00,
-        0x00};
+    extern char hankaku[4096];
 
     init_palette();
 
     init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
 
-    putfont8(binfo->vram, binfo->scrnx, 10, 10, COL8_FFFFFF, font_a);
+    putfont8(binfo->vram, binfo->scrnx, 8, 8, COL8_FFFFFF, hankaku + 'W' * 16);
+    putfont8(binfo->vram, binfo->scrnx, 16, 8, COL8_FFFFFF, hankaku + 'D' * 16);
+    putfont8(binfo->vram, binfo->scrnx, 24, 8, COL8_FFFFFF, hankaku + 'K' * 16);
+    putfont8(binfo->vram, binfo->scrnx, 40, 8, COL8_FFFFFF, hankaku + '2' * 16);
+    putfont8(binfo->vram, binfo->scrnx, 48, 8, COL8_FFFFFF, hankaku + '3' * 16);
 
     for (;;)
     {
@@ -106,13 +94,7 @@ void set_palette(int start, int end, unsigned char *rgb)
     return;
 }
 
-void boxfill8(unsigned char *vram,
-              int xsize,
-              unsigned char c,
-              int x0,
-              int y0,
-              int x1,
-              int y1)
+void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1)
 {
     for (int y = y0; y <= y1; y++)
     {

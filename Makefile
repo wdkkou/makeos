@@ -2,7 +2,7 @@
 # デフォルト動作
 
 default :
-	make img
+	make run
 
 # ファイル生成規則
 
@@ -15,8 +15,8 @@ asmhead.bin : asmhead.asm Makefile
 nasmfunc.o : nasmfunc.asm Makefile
 	nasm -g -f elf32 nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
 
-bootpack.hrb : bootpack.c har.ls nasmfunc.o Makefile
-	gcc -m32 -nostdlib -fno-pic -T har.ls -g bootpack.c nasmfunc.o -o bootpack.hrb
+bootpack.hrb : bootpack.c har.ls nasmfunc.o hankaku.c Makefile
+	gcc -m32 -nostdlib -fno-pic -T har.ls bootpack.c hankaku.c nasmfunc.o -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
@@ -24,6 +24,12 @@ haribote.sys : asmhead.bin bootpack.hrb Makefile
 haribote.img : ipl.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
+
+hankaku.c : hankaku.txt conv_hankaku.o
+	./conv_hankaku.o
+
+conv_hankaku.o : conv_hankaku.c
+	gcc -o conv_hankaku.o conv_hankaku.c
 
 # コマンド
 
@@ -48,6 +54,7 @@ clean :
 	rm *.img
 	rm *.hrb
 	rm *.o
+	rm hankaku.c
 
 debug:
 	make img

@@ -2,7 +2,7 @@
 # デフォルト動作
 
 default :
-	make img
+	make run
 
 # ファイル生成規則
 
@@ -13,10 +13,22 @@ asmhead.bin : asmhead.asm Makefile
 	nasm asmhead.asm -o asmhead.bin -l asmhead.lst
 
 nasmfunc.o : nasmfunc.asm Makefile
-	nasm -g -f elf32 nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
+	nasm -f elf nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
 
-bootpack.hrb : bootpack.c har.ls nasmfunc.o Makefile
-	gcc -m32 -nostdlib -fno-pic -T har.ls -g bootpack.c nasmfunc.o -o bootpack.hrb
+hankaku.c : hankaku.txt conv_hankaku
+	./conv_hankaku
+
+conv_hankaku : conv_hankaku.c
+	gcc -o conv_hankaku conv_hankaku.c
+
+hankaku.o : hankaku.c
+	gcc -c -m32 -march=i486 -nostdlib -o hankaku.o hankaku.c
+
+mysprintf.o : mysprintf.c
+	gcc -c -m32 -march=i486 -nostdlib mysprintf.c -o mysprintf.o
+
+bootpack.hrb : bootpack.c hankaku.o nasmfunc.o mysprintf.o har.ls Makefile
+	gcc -m32 -march=i486 -nostdlib -nostdinc -T har.ls bootpack.c hankaku.o nasmfunc.o mysprintf.o -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
@@ -42,12 +54,7 @@ vdi : haribote.img
 	VBoxManage convertfromraw --format VDI haribote.img haribote.vdi
 
 clean :
-	rm *.bin
-	rm *.lst
-	rm *.sys
-	rm *.img
-	rm *.hrb
-	rm *.o
+	rm *.bin *.o *.lst hankaku.c conv_hankaku *.img *.hrb *.sys
 
 debug:
 	make img

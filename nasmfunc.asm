@@ -6,6 +6,7 @@ section .text
     GLOBAL  io_in8, io_in16, io_in32
     GLOBAL  io_out8, io_out16, io_out32
     GLOBAL  io_load_eflags, io_store_eflags
+    GLOBAL  load_gdtr,load_idtr
 
 io_hlt:
     HLT
@@ -68,4 +69,16 @@ io_store_eflags:        ; void io_store_eflags(int eflags);
         mov     eax, [esp + 4]
         push    eax
         popfd       ; pup eflags double-word
+        ret
+
+load_gdtr :
+        mov ax, [esp + 4]
+        mov [esp + 6], ax
+        lgdt [esp + 6]
+        ret
+
+load_idtr :
+        mov ax, [esp + 4]
+        mov [esp + 6], ax
+        lidt [esp + 6]
         ret

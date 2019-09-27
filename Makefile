@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -c -m32 -march=i486 -nostdlib
+CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
 OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o graphic.o dsctbl.o
 # デフォルト動作
 
@@ -12,7 +12,7 @@ all :
 	$(CC) $(CFLAGS) $< -o $@
 
 %.bin : %.asm Makefile
-	nasm $< -o $@
+	nasm $< -o $@ -l $*.lst
 
 nasmfunc.o : nasmfunc.asm Makefile
 	nasm -f elf nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
@@ -24,7 +24,7 @@ conv_hankaku : conv_hankaku.c
 	gcc -o conv_hankaku conv_hankaku.c
 
 bootpack.hrb : $(OBJ_ALL) har.ls Makefile
-	gcc -m32 -march=i486 -nostdlib -nostdinc -T har.ls $(OBJ_ALL) -o bootpack.hrb
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T har.ls $(OBJ_ALL) -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys

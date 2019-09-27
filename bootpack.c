@@ -6,6 +6,8 @@ void HariMain(void)
     extern char hankaku[4096];
     char s[40], mcursor[256];
 
+    init_gdtidt();
+    init_pic();
     init_palette();
 
     init_screen(binfo->vram, binfo->scrnx, binfo->scrny);

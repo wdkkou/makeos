@@ -18,16 +18,18 @@ void init_pic(void)
     io_out8(PIC0_IMR, 0xfb);
     io_out8(PIC1_IMR, 0xff);
 }
+#define PORT_KEYDAT 0x0060
 void inthandler21(int *esp)
 {
     /* ps/2 keyboard 割り込み */
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-    boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
-    putfont8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 21 (IRQ-1) : PS2 keyboard");
-    for (;;)
-    {
-        io_hlt();
-    }
+    unsigned char data, s[4];
+    io_out8(PIC0_OCW2, 0x61);
+    data = io_in8(PORT_KEYDAT);
+
+    sprintf(s, "%x", data);
+    boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
+    putfont8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
 }
 
 void inthandler2c(int *esp)

@@ -1,8 +1,12 @@
 #include "bootpack.h"
-
+struct MOUSE_DEC
+{
+    unsigned char buf[3], phase;
+};
 struct FIFO8 keyfifo, mousefifo;
-void enable_mouse(void);
+void enable_mouse(struct MOUSE_DEC *mdec);
 void init_keyboard(void);
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data);
 
 void HariMain(void)
 {
@@ -34,7 +38,9 @@ void HariMain(void)
     sprintf(s, "(%d, %d)", mx, my);
     putfont8_asc(binfo->vram, binfo->scrnx, 16, 64, WHITE, s);
 
-    enable_mouse();
+    struct MOUSE_DEC mdec;
+
+    enable_mouse(&mdec);
 
     int i;
     for (;;)
@@ -58,9 +64,12 @@ void HariMain(void)
             {
                 i = fifo8_get(&mousefifo);
                 io_sti();
-                sprintf(s, "%x", i);
-                boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 32, 16, 47, 31);
-                putfont8_asc(binfo->vram, binfo->scrnx, 32, 16, WHITE, s);
+                if (mouse_decode(&mdec, i) != 0)
+                {
+                    sprintf(s, "%x %x %x", mdec.buf[0], mdec.buf[1], mdec.buf[2]);
+                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 32, 16, 32 + 8 * 8 - 1, 31);
+                    putfont8_asc(binfo->vram, binfo->scrnx, 32, 16, WHITE, s);
+                }
             }
         }
     }
@@ -98,11 +107,42 @@ void init_keyboard(void)
 #define KEYCMD_SENDTO_MOUSE 0xd4
 #define MOUSECMD_ENABLE 0xf4
 
-void enable_mouse(void)
+void enable_mouse(struct MOUSE_DEC *mdec)
 {
     wait_KBC_sendready();
     io_out8(PORT_KEYCMD, KEYCMD_SENDTO_MOUSE);
     wait_KBC_sendready();
     io_out8(PORT_KEYDAT, MOUSECMD_ENABLE);
+    mdec->phase = 0;
     return;
+}
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data)
+{
+    if (mdec->phase == 0)
+    {
+        if (data == 0xfa)
+        {
+            mdec->phase = 1;
+        }
+        return 0;
+    }
+    if (mdec->phase == 1)
+    {
+        mdec->buf[0] = data;
+        mdec->phase = 2;
+        return 0;
+    }
+    if (mdec->phase == 2)
+    {
+        mdec->buf[1] = data;
+        mdec->phase = 3;
+        return 0;
+    }
+    if (mdec->phase == 3)
+    {
+        mdec->buf[2] = data;
+        mdec->phase = 1;
+        return 1;
+    }
+    return -1;
 }

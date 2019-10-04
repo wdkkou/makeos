@@ -5,3 +5,4 @@
 *.hrb
 *.o
 conv_hankaku
+hankaku.c

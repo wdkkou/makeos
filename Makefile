@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
-OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o graphic.o dsctbl.o init.o fifo.o
+OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o graphic.o dsctbl.o int.o fifo.o
 # デフォルト動作
 
 all :

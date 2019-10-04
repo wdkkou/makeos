@@ -26,20 +26,20 @@ struct FIFO8 keyfifo;
 void inthandler21(int *esp)
 {
     unsigned char data;
-    io_out8(PIC0_OCW2, 0x61);
+    io_out8(PIC0_OCW2, 0x61); /* IRQ-01受付完了をPIC0に通知 */
     data = io_in8(PORT_KEYDAT);
     fifo8_put(&keyfifo, data);
     return;
 }
 
+struct FIFO8 mousefifo;
+/* ps/2 mouse 割り込み */
 void inthandler2c(int *esp)
 {
-    /* ps/2 mouse 割り込み */
-    struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-    boxfill8(binfo->vram, binfo->scrnx, BLACK, 0, 0, 32 * 8 - 1, 15);
-    putfont8_asc(binfo->vram, binfo->scrnx, 0, 0, WHITE, "INT 2c (IRQ-12) : PS2 mouse");
-    for (;;)
-    {
-        io_hlt();
-    }
+    unsigned char data;
+    io_out8(PIC1_OCW2, 0x64); /* IRQ-12受付完了をPIC1に通知 */
+    io_out8(PIC0_OCW2, 0x62); /* IRQ-02受付完了をPIC0に通知 */
+    data = io_in8(PORT_KEYDAT);
+    fifo8_put(&mousefifo, data);
+    return;
 }

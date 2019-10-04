@@ -5,8 +5,9 @@ void sprintf(char *str, char *fmt, ...);
 void io_hlt(void);
 void io_cli(void);
 void io_sti(void);
-void write_mem8(int addr, int data);
+void io_stihlt(void);
 void io_out8(int port, int data);
+int io_in8(int port);
 int io_load_eflags(void);
 void io_store_eflags(int eflags);
 void load_gdtr(int limit, int addr);
@@ -80,6 +81,12 @@ void init_gdtidt(void);
 #define AR_INTGATE32 0x0008e
 
 /* init.c */
+
+struct KEYBUF
+{
+    unsigned char data[32];
+    int next;
+};
 void init_pic(void);
 void inthandler21(int *esp);
 void inthandler2c(int *esp);

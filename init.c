@@ -18,7 +18,11 @@ void init_pic(void)
     io_out8(PIC0_IMR, 0xfb);
     io_out8(PIC1_IMR, 0xff);
 }
+
 #define PORT_KEYDAT 0x0060
+
+struct KEYBUF keybuf;
+
 void inthandler21(int *esp)
 {
     /* ps/2 keyboard 割り込み */
@@ -26,10 +30,12 @@ void inthandler21(int *esp)
     unsigned char data, s[4];
     io_out8(PIC0_OCW2, 0x61);
     data = io_in8(PORT_KEYDAT);
-
-    sprintf(s, "%x", data);
-    boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
-    putfont8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+    if (keybuf.next < 32)
+    {
+        keybuf.data[keybuf.next] = data;
+        keybuf.next++;
+    }
+    return;
 }
 
 void inthandler2c(int *esp)

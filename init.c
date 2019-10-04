@@ -21,20 +21,14 @@ void init_pic(void)
 
 #define PORT_KEYDAT 0x0060
 
-struct KEYBUF keybuf;
-
+struct FIFO8 keyfifo;
+/* ps/2 keyboard 割り込み */
 void inthandler21(int *esp)
 {
-    /* ps/2 keyboard 割り込み */
-    struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-    unsigned char data, s[4];
+    unsigned char data;
     io_out8(PIC0_OCW2, 0x61);
     data = io_in8(PORT_KEYDAT);
-    if (keybuf.next < 32)
-    {
-        keybuf.data[keybuf.next] = data;
-        keybuf.next++;
-    }
+    fifo8_put(&keyfifo, data);
     return;
 }
 
@@ -42,8 +36,8 @@ void inthandler2c(int *esp)
 {
     /* ps/2 mouse 割り込み */
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-    boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
-    putfont8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 2c (IRQ-12) : PS2 mouse");
+    boxfill8(binfo->vram, binfo->scrnx, BLACK, 0, 0, 32 * 8 - 1, 15);
+    putfont8_asc(binfo->vram, binfo->scrnx, 0, 0, WHITE, "INT 2c (IRQ-12) : PS2 mouse");
     for (;;)
     {
         io_hlt();

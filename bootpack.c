@@ -48,7 +48,6 @@ void HariMain(void)
             {
                 i = fifo8_get(&keyfifo);
                 io_sti();
-                putfont8_asc(binfo->vram, binfo->scrnx, 30, 30, WHITE, "oreore OS");
                 sprintf(s, "%x", i);
                 boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 0, 16, 15, 31);
                 putfont8_asc(binfo->vram, binfo->scrnx, 0, 16, WHITE, s);
@@ -59,7 +58,7 @@ void HariMain(void)
                 io_sti();
                 if (mouse_decode(&mdec, i) != 0)
                 {
-                    // sprintf(s, "[lcr %d %d]", mdec.x, mdec.y);
+                    sprintf(s, "[lcr %d %d]", mdec.x, mdec.y);
                     if ((mdec.btn & 0x01) != 0)
                     {
                         s[1] = 'L';
@@ -72,8 +71,8 @@ void HariMain(void)
                     {
                         s[2] = 'C';
                     }
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 32, 16, 32 + 15 * 8 - 1, 31);
-                    //putfont8_asc(binfo->vram, binfo->scrnx, 32, 16, WHITE, s);
+                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 32, 32, 32 + 15 * 8 - 1, 47);
+                    putfont8_asc(binfo->vram, binfo->scrnx, 32, 32, WHITE, s);
                     /* マウスカーソルの移動 */
                     boxfill8(binfo->vram, binfo->scrnx, COL8_008400, mx, my, mx + 15, my + 15);
                     mx += mdec.x;

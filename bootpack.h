@@ -115,7 +115,7 @@ void wait_KBC_sendready(void);
 void init_keyboard(void);
 extern struct FIFO8 keyfifo;
 #define PORT_KEYDAT 0x0060
-#define PORT_KEYCMD 0x0060
+#define PORT_KEYCMD 0x0064
 
 /* mouse.c */
 struct MOUSE_DEC

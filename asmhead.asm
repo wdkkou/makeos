@@ -13,21 +13,21 @@ SCRNX	EQU		0x0ff4			; 解像度のX
 SCRNY	EQU		0x0ff6			; 解像度のY
 VRAM	EQU		0x0ff8			; グラフィックバッファの開始番地
 
-		ORG		0xc200			; このプログラムがどこに読み込まれるのか
+	ORG		0xc200			; このプログラムがどこに読み込まれるのか
 
-		MOV		AL,0x13			; VGAグラフィックス、320x200x8bitカラー
-		MOV		AH,0x00
-		INT		0x10
-		MOV		BYTE [VMODE],8	; 画面モードをメモする
-		MOV		WORD [SCRNX],320
-		MOV		WORD [SCRNY],200
-		MOV		DWORD [VRAM],0x000a0000
+	MOV		AL,0x13			; VGAグラフィックス、320x200x8bitカラー
+	MOV		AH,0x00
+	INT		0x10
+	MOV		BYTE [VMODE],8	; 画面モードをメモする
+	MOV		WORD [SCRNX],320
+	MOV		WORD [SCRNY],200
+	MOV		DWORD [VRAM],0x000a0000
 
-; キーボードのLED状態をBIOSに教えてもらう
+;キーボードのLED状態をBIOSに教えてもらう
 
-		MOV		AH,0x02
-		INT		0x16 			; keyboard BIOS
-		MOV		[LEDS],AL
+	MOV		AH,0x02
+	INT		0x16 			; keyboard BIOS
+	MOV		[LEDS],AL
 
         MOV     AL, 0xff
         OUT     0x21, AL
@@ -70,7 +70,6 @@ pipelineflush:
         MOV  ESI,bootpack ; 転送元
         MOV  EDI,BOTPAK  ; 転送先
         MOV  ECX,512*1024/4
-        ;MOV  ECX, 131072
         CALL memcpy
 
         ; ついでにディスクデータも本来の位置へ転送
@@ -90,9 +89,7 @@ pipelineflush:
         MOV  ECX,0
         MOV  CL,BYTE [CYLS]
         IMUL ECX,512*18*2/4 ; シリンダ数からバイト数/4に変換
-        ;IMUL ECX, 4608
         SUB  ECX,512/4  ; IPLの分だけ差し引く
-        ;SUB  ECX, 128  ; IPLの分だけ差し引く
         CALL memcpy
 
         ; asmheadでしなければいけないことは全部し終わったので、
@@ -131,7 +128,8 @@ memcpy:
 
         ALIGNB 16
 GDT0:
-        RESB 8    ; ヌルセレクタ
+        ;RESB 8    ; ヌルセレクタ
+        TIMES 8 DB 0
         DW  0xffff,0x0000,0x9200,0x00cf ; 読み書き可能セグメント32bit
         DW  0xffff,0x0000,0x9a28,0x0047 ; 実行可能セグメント32bit（bootpack用）
 
@@ -141,4 +139,5 @@ GDTR0:
         DD  GDT0
 
         ALIGNB 16
+        DB 0
 bootpack:

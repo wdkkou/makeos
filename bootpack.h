@@ -12,8 +12,12 @@ int io_load_eflags(void);
 void io_store_eflags(int eflags);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
+int load_cr0(void);
+void store_cr0(int cr0);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
+void asm_inthandler27(void);
+unsigned int memtest_sub(unsigned int start, unsigned int end);
 
 /* graphic.c */
 void init_palette(void);
@@ -52,6 +56,7 @@ struct BOOTINFO
 };
 
 #define ADR_BOOTINFO 0x00000ff0
+
 /* dsctbl.c */
 struct SEGMENT_DESCRIPTOR
 {
@@ -67,9 +72,9 @@ struct GATE_DESCRIPTOR
     short offset_high;
 };
 
+void init_gdtidt(void);
 void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
 void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
-void init_gdtidt(void);
 
 #define ADR_IDT 0x0026f800
 #define LIMIT_IDT 0x000007ff
@@ -81,11 +86,9 @@ void init_gdtidt(void);
 #define AR_CODE32_ER 0x409a
 #define AR_INTGATE32 0x0008e
 
-/* init.c */
+/* int.c */
 
 void init_pic(void);
-void inthandler21(int *esp);
-void inthandler2c(int *esp);
 #define PIC0_ICW1 0x0020
 #define PIC0_OCW2 0x0020
 #define PIC0_IMR 0x0021
@@ -109,3 +112,22 @@ void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf);
 int fifo8_put(struct FIFO8 *fifo, unsigned char data);
 int fifo8_get(struct FIFO8 *fifo);
 int fifo8_status(struct FIFO8 *fifo);
+
+/* keyboard.c */
+void inthandler21(int *esp);
+void wait_KBC_sendready(void);
+void init_keyboard(void);
+extern struct FIFO8 keyfifo;
+#define PORT_KEYDAT 0x0060
+#define PORT_KEYCMD 0x0064
+
+/* mouse.c */
+struct MOUSE_DEC
+{
+    unsigned char buf[3], phase;
+    int x, y, btn;
+};
+void inthandler2c(int *esp);
+void enable_mouse(struct MOUSE_DEC *mdec);
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data);
+extern struct FIFO8 mousefifo;

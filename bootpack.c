@@ -1,13 +1,24 @@
 #include "bootpack.h"
-struct MOUSE_DEC
+
+#define MEM_FREES 4090 /* 約32GB */
+#define MEM_ADDR 0x003c0000
+
+/* 空き情報 */
+struct FREEINFO
 {
-    unsigned char buf[3], phase;
-    int x, y, btn;
+    unsigned int addr, size;
 };
-struct FIFO8 keyfifo, mousefifo;
-void enable_mouse(struct MOUSE_DEC *mdec);
-void init_keyboard(void);
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data);
+/* メモリ管理 */
+struct MEMMAN
+{
+    int frees, maxfrees, lostsize, losts;
+    struct FREEINFO free[MEM_FREES];
+};
+unsigned int memtest(unsigned int start, unsigned int end);
+void memman_init(struct MEMMAN *man);
+unsigned int memman_total(struct MEMMAN *man);
+unsigned int memman_alloc(struct MEMMAN *man, unsigned int size);
+int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size);
 
 void HariMain(void)
 {
@@ -26,23 +37,27 @@ void HariMain(void)
 
     init_keyboard();
 
+    struct MOUSE_DEC mdec;
+    enable_mouse(&mdec);
+
     init_palette();
     init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
-
-    // putfont8_asc(binfo->vram, binfo->scrnx, 8, 8, WHITE, "WDK");
-    // putfont8_asc(binfo->vram, binfo->scrnx, 30, 30, WHITE, "oreore OS");
-
     init_mouse_cursor8(mcursor, COL8_008400);
     int mx = (binfo->scrnx - 16) / 2;
     int my = (binfo->scrny - 28 - 16) / 2;
     putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
     //sprintf(s, "(%d, %d)", mx, my);
     //putfont8_asc(binfo->vram, binfo->scrnx, 16, 64, WHITE, s);
+    // putfont8_asc(binfo->vram, binfo->scrnx, 8, 8, WHITE, "WDK");
+    // putfont8_asc(binfo->vram, binfo->scrnx, 30, 30, WHITE, "oreore OS");
 
-    struct MOUSE_DEC mdec;
-
-    enable_mouse(&mdec);
-
+    struct MEMMAM *memman = (struct MEMMAN *)MEM_ADDR;
+    unsigned int memtotal = memtest(0x00400000, 0xbfffffff);
+    memman_init(memman);
+    memman_free(memman, 0x00001000, 0x0009e000);
+    memman_free(memman, 0x00400000, memtotal - 0x00400000);
+    sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
+    putfont8_asc(binfo->vram, binfo->scrnx, 0, 50, WHITE, s);
     int i;
     for (;;)
     {
@@ -67,7 +82,7 @@ void HariMain(void)
                 io_sti();
                 if (mouse_decode(&mdec, i) != 0)
                 {
-                    // sprintf(s, "[lcr %d %d]", mdec.x, mdec.y);
+                    sprintf(s, "[lcr %d %d]", mdec.x, mdec.y);
                     if ((mdec.btn & 0x01) != 0)
                     {
                         s[1] = 'L';
@@ -80,8 +95,8 @@ void HariMain(void)
                     {
                         s[2] = 'C';
                     }
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 32, 16, 32 + 15 * 8 - 1, 31);
-                    //putfont8_asc(binfo->vram, binfo->scrnx, 32, 16, WHITE, s);
+                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 32, 32, 32 + 15 * 8 - 1, 47);
+                    putfont8_asc(binfo->vram, binfo->scrnx, 32, 32, WHITE, s);
                     /* マウスカーソルの移動 */
                     boxfill8(binfo->vram, binfo->scrnx, COL8_008400, mx, my, mx + 15, my + 15);
                     mx += mdec.x;
@@ -112,89 +127,150 @@ void HariMain(void)
     }
 }
 
-#define PORT_KEYDAT 0x0060
-#define PORT_KEYSTA 0x0064
-#define PORT_KEYCMD 0x0064
-#define KEYSTA_SEND_NOTREADY 0x02
-#define KEYCMD_WRITE_MODE 0x60
-#define KBC_MODE 0x47
-
-/* キーボードコントローラが送信可能になるのを待つ */
-void wait_KBC_sendready(void)
+#define EFLAGS_AC_BIT 0x00040000
+#define CR0_CACHE_DISABLE 0x60000000
+unsigned int memtest(unsigned int start, unsigned int end)
 {
-    for (;;)
+    int flg486 = 0;
+    unsigned int eflg, cr0, i;
+
+    eflg = io_load_eflags();
+    eflg |= EFLAGS_AC_BIT;
+    io_store_eflags(eflg);
+    eflg = io_load_eflags();
+    if ((eflg & EFLAGS_AC_BIT) != 0)
     {
-        if ((io_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0)
+        flg486 = 1;
+    }
+    eflg &= ~EFLAGS_AC_BIT;
+    io_store_eflags(eflg);
+
+    if (flg486 != 0)
+    {
+        cr0 = load_cr0();
+        cr0 |= CR0_CACHE_DISABLE; /* キャッシュ禁止 */
+        store_cr0(cr0);
+    }
+
+    i = memtest_sub(start, end);
+
+    if (flg486 != 0)
+    {
+        cr0 = load_cr0();
+        cr0 &= ~CR0_CACHE_DISABLE; /* キャッシュ許可*/
+        store_cr0(cr0);
+    }
+
+    return i;
+}
+
+void memman_init(struct MEMMAN *man)
+{
+    man->frees = 0;    /* 空き情報の個数 */
+    man->maxfrees = 0; /* freesの最大値 */
+    man->lostsize = 0; /* 解放に失敗した合計サイズ*/
+    man->losts = 0;    /* 解放に失敗した回数　*/
+    return;
+}
+/* 空きサイズの合計 */
+unsigned int memman_total(struct MEMMAN *man)
+{
+    unsigned total = 0;
+    for (unsigned int i = 0; i < man->frees; i++)
+    {
+        total += man->free[i].size;
+    }
+    return total;
+}
+
+unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
+{
+    for (unsigned int i = 0; i < man->frees; i++)
+    {
+        /* 十分な空きを発見 */
+        if (man->free[i].size >= size)
+        {
+            unsigned int a = man->free[i].addr;
+            man->free[i].addr += size;
+            man->free[i].size -= size;
+            if (man->free[i].size == 0)
+            {
+                /* free[i]がなくなれば、前へ詰める */
+                man->frees--;
+                for (; i < man->frees; i++)
+                {
+                    man->free[i] = man->free[i + 1];
+                }
+            }
+            return a;
+        }
+    }
+    return 0; /* 空きがない */
+}
+/* メモリの解放　*/
+int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
+{
+    int i;
+    for (i = 0; i < man->frees; i++)
+    {
+        if (man->free[i].addr > addr)
         {
             break;
         }
     }
-    return;
-}
-
-void init_keyboard(void)
-{
-    wait_KBC_sendready();
-    io_out8(PORT_KEYCMD, KEYCMD_WRITE_MODE);
-    wait_KBC_sendready();
-    io_out8(PORT_KEYDAT, KBC_MODE);
-    return;
-}
-
-#define KEYCMD_SENDTO_MOUSE 0xd4
-#define MOUSECMD_ENABLE 0xf4
-
-void enable_mouse(struct MOUSE_DEC *mdec)
-{
-    wait_KBC_sendready();
-    io_out8(PORT_KEYCMD, KEYCMD_SENDTO_MOUSE);
-    wait_KBC_sendready();
-    io_out8(PORT_KEYDAT, MOUSECMD_ENABLE);
-    mdec->phase = 0;
-    return;
-}
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data)
-{
-    if (mdec->phase == 0)
+    /* free[i-1].addr < addr < free[i].addrの状態 */
+    if (i > 0)
     {
-        if (data == 0xfa)
+        /* 前が存在 */
+        if (man->free[i - 1].addr + man->free[i - 1].size == addr)
         {
-            mdec->phase = 1;
+            /* 前の空き情報とまとめる */
+            man->free[i - 1].size += size;
+            /* 後ろも存在 */
+            if (i < man->frees)
+            {
+                if (addr + size == man->free[i].addr)
+                {
+                    /*後ろもまとめる*/
+                    man->free[i - 1].size += man->free[i].size;
+                    man->frees--;
+                    for (; i < man->frees; i++)
+                    {
+                        man->free[i] = man->free[i + 1];
+                    }
+                }
+            }
+            return 0; /* 成功終了 */
         }
+    }
+    if (i < man->frees)
+    {
+        /* 後ろの空き領域とまとめる */
+        if (addr + size == man->free[i].addr)
+        {
+            man->free[i].addr = addr;
+            man->free[i].size += size;
+            return 0;
+        }
+    }
+    if (man->frees < MEM_FREES)
+    {
+        /* free[i]より後ろのfreeを後ろへずらす */
+        for (int j = man->frees; j > i; j--)
+        {
+            man->free[j] = man->free[j - 1];
+        }
+        man->frees++;
+        if (man->frees > man->maxfrees)
+        {
+            man->maxfrees = man->frees;
+        }
+        man->free[i].addr = addr;
+        man->free[i].size = size;
         return 0;
     }
-    if (mdec->phase == 1)
-    {
-        if ((data & 0xc8) == 0x08)
-        {
-            mdec->buf[0] = data;
-            mdec->phase = 2;
-        }
-        return 0;
-    }
-    if (mdec->phase == 2)
-    {
-        mdec->buf[1] = data;
-        mdec->phase = 3;
-        return 0;
-    }
-    if (mdec->phase == 3)
-    {
-        mdec->buf[2] = data;
-        mdec->phase = 1;
-        mdec->btn = mdec->buf[0] & 0x07;
-        mdec->x = mdec->buf[1];
-        mdec->y = mdec->buf[2];
-        if ((mdec->buf[0] & 0x10) != 0)
-        {
-            mdec->x |= 0xffffff00;
-        }
-        if ((mdec->buf[0] & 0x20) != 0)
-        {
-            mdec->y |= 0xffffff00;
-        }
-        mdec->y = -mdec->y;
-        return 1;
-    }
+
+    man->losts++;
+    man->lostsize += size;
     return -1;
 }

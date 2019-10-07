@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
-OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o graphic.o dsctbl.o int.o fifo.o
+OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o graphic.o dsctbl.o int.o fifo.o mouse.o keyboard.o
 # デフォルト動作
 
 all :
@@ -44,7 +44,7 @@ img :
 
 run :
 	make img
-	qemu-system-i386 -fda haribote.img
+	qemu-system-i386 -m 32 -fda haribote.img
 
 vdi : haribote.img
 	rm ./helloos.vdi -f

@@ -1,6 +1,24 @@
 #include "bootpack.h"
+
+#define MEM_FREES 4090 /* 約32GB */
+#define MEM_ADDR 0x003c0000
+
+/* 空き情報 */
+struct FREEINFO
+{
+    unsigned int addr, size;
+};
+/* メモリ管理 */
+struct MEMMAN
+{
+    int frees, maxfrees, lostsize, losts;
+    struct FREEINFO free[MEM_FREES];
+};
 unsigned int memtest(unsigned int start, unsigned int end);
-unsigned int memtest_sub(unsigned int start, unsigned int end);
+void memman_init(struct MEMMAN *man);
+unsigned int memman_total(struct MEMMAN *man);
+unsigned int memman_alloc(struct MEMMAN *man, unsigned int size);
+int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size);
 
 void HariMain(void)
 {
@@ -19,25 +37,26 @@ void HariMain(void)
 
     init_keyboard();
 
+    struct MOUSE_DEC mdec;
+    enable_mouse(&mdec);
+
     init_palette();
     init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
-
-    // putfont8_asc(binfo->vram, binfo->scrnx, 8, 8, WHITE, "WDK");
-    // putfont8_asc(binfo->vram, binfo->scrnx, 30, 30, WHITE, "oreore OS");
-
     init_mouse_cursor8(mcursor, COL8_008400);
     int mx = (binfo->scrnx - 16) / 2;
     int my = (binfo->scrny - 28 - 16) / 2;
     putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
     //sprintf(s, "(%d, %d)", mx, my);
     //putfont8_asc(binfo->vram, binfo->scrnx, 16, 64, WHITE, s);
+    // putfont8_asc(binfo->vram, binfo->scrnx, 8, 8, WHITE, "WDK");
+    // putfont8_asc(binfo->vram, binfo->scrnx, 30, 30, WHITE, "oreore OS");
 
-    struct MOUSE_DEC mdec;
-
-    enable_mouse(&mdec);
-
-    int x = memtest(0x00400000, 0xbfffffff) / (1024 * 1024);
-    sprintf(s, "memory = %dMB", x);
+    struct MEMMAM *memman = (struct MEMMAN *)MEM_ADDR;
+    unsigned int memtotal = memtest(0x00400000, 0xbfffffff);
+    memman_init(memman);
+    memman_free(memman, 0x00001000, 0x0009e000);
+    memman_free(memman, 0x00400000, memtotal - 0x00400000);
+    sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
     putfont8_asc(binfo->vram, binfo->scrnx, 0, 50, WHITE, s);
     int i;
     for (;;)
@@ -145,34 +164,113 @@ unsigned int memtest(unsigned int start, unsigned int end)
     return i;
 }
 
-// unsigned int memtest_sub(unsigned int start, unsigned int end)
-// {
-//     unsigned int i, *p, old, pat0 = 0xaa55aa55, pat1 = 0x55aa55aa;
-//     for (i = start; i <= end; i += 0x1000)
-//     {
-//         p = (unsigned int *)(i + 0xffc);
-//         old = *p;
-//         /* いじる前の値を覚えておく */
-//         *p = pat0;
-//         /* ためしに書いてみる */
-//         *p ^= 0xffffffff;
-//         /* そしてそれを反転してみる */
-//         if (*p != pat1)
-//         {
-//             /* 反転結果になったか？ */
-//         not_memory:
-//             *p = old;
-//             break;
-//         }
-//         *p ^= 0xffffffff;
-//         /* もう一度反転してみる */
-//         if (*p != pat0)
-//         {
-//             /* 元に戻ったか？ */
-//             goto not_memory;
-//         }
-//         *p = old;
-//         /* いじった値を元に戻す */
-//     }
-//     return i;
-// }
+void memman_init(struct MEMMAN *man)
+{
+    man->frees = 0;    /* 空き情報の個数 */
+    man->maxfrees = 0; /* freesの最大値 */
+    man->lostsize = 0; /* 解放に失敗した合計サイズ*/
+    man->losts = 0;    /* 解放に失敗した回数　*/
+    return;
+}
+/* 空きサイズの合計 */
+unsigned int memman_total(struct MEMMAN *man)
+{
+    unsigned total = 0;
+    for (unsigned int i = 0; i < man->frees; i++)
+    {
+        total += man->free[i].size;
+    }
+    return total;
+}
+
+unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
+{
+    for (unsigned int i = 0; i < man->frees; i++)
+    {
+        /* 十分な空きを発見 */
+        if (man->free[i].size >= size)
+        {
+            unsigned int a = man->free[i].addr;
+            man->free[i].addr += size;
+            man->free[i].size -= size;
+            if (man->free[i].size == 0)
+            {
+                /* free[i]がなくなれば、前へ詰める */
+                man->frees--;
+                for (; i < man->frees; i++)
+                {
+                    man->free[i] = man->free[i + 1];
+                }
+            }
+            return a;
+        }
+    }
+    return 0; /* 空きがない */
+}
+/* メモリの解放　*/
+int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
+{
+    int i;
+    for (i = 0; i < man->frees; i++)
+    {
+        if (man->free[i].addr > addr)
+        {
+            break;
+        }
+    }
+    /* free[i-1].addr < addr < free[i].addrの状態 */
+    if (i > 0)
+    {
+        /* 前が存在 */
+        if (man->free[i - 1].addr + man->free[i - 1].size == addr)
+        {
+            /* 前の空き情報とまとめる */
+            man->free[i - 1].size += size;
+            /* 後ろも存在 */
+            if (i < man->frees)
+            {
+                if (addr + size == man->free[i].addr)
+                {
+                    /*後ろもまとめる*/
+                    man->free[i - 1].size += man->free[i].size;
+                    man->frees--;
+                    for (; i < man->frees; i++)
+                    {
+                        man->free[i] = man->free[i + 1];
+                    }
+                }
+            }
+            return 0; /* 成功終了 */
+        }
+    }
+    if (i < man->frees)
+    {
+        /* 後ろの空き領域とまとめる */
+        if (addr + size == man->free[i].addr)
+        {
+            man->free[i].addr = addr;
+            man->free[i].size += size;
+            return 0;
+        }
+    }
+    if (man->frees < MEM_FREES)
+    {
+        /* free[i]より後ろのfreeを後ろへずらす */
+        for (int j = man->frees; j > i; j--)
+        {
+            man->free[j] = man->free[j - 1];
+        }
+        man->frees++;
+        if (man->frees > man->maxfrees)
+        {
+            man->maxfrees = man->frees;
+        }
+        man->free[i].addr = addr;
+        man->free[i].size = size;
+        return 0;
+    }
+
+    man->losts++;
+    man->lostsize += size;
+    return -1;
+}

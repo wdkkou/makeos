@@ -34,10 +34,12 @@ void HariMain(void)
     struct MEMMAM *memman = (struct MEMMAN *)MEM_ADDR;
     unsigned int memtotal = memtest(0x00400000, 0xbfffffff);
     memman_init(memman);
-    memman_free(memman, 0x00001000, 0x0009e000);
-    memman_free(memman, 0x00400000, memtotal - 0x00400000);
+    memman_free_4k(memman, 0x00001000, 0x0009e000);
+    memman_free_4k(memman, 0x00400000, memtotal - 0x00400000);
+
     sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
     putfont8_asc(binfo->vram, binfo->scrnx, 0, 50, WHITE, s);
+
     int i;
     for (;;)
     {

@@ -147,3 +147,17 @@ int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
     man->lostsize += size;
     return -1;
 }
+
+unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size)
+{
+    size = (size + 0xfff) & 0xfffff000;
+    unsigned a = memman_alloc(man, size);
+    return a;
+}
+
+int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size)
+{
+    size = (size + 0xfff) & 0xfffff000;
+    int i = memman_free(man, addr, size);
+    return i;
+}

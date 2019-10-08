@@ -2,7 +2,7 @@
 
 void HariMain(void)
 {
-    struct BOOTINFO *binfo = (struct BOOTINFO *)0xff0;
+    struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     char s[40], mcursor[256], keybuf[32], mousebuf[128];
 
     init_gdtidt();

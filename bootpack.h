@@ -141,12 +141,14 @@ struct FREEINFO
 {
     unsigned int addr, size;
 };
+
 /* メモリ管理 */
 struct MEMMAN
 {
     int frees, maxfrees, lostsize, losts;
     struct FREEINFO free[MEM_FREES];
 };
+
 unsigned int memtest(unsigned int start, unsigned int end);
 void memman_init(struct MEMMAN *man);
 unsigned int memman_total(struct MEMMAN *man);

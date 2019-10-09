@@ -35,18 +35,17 @@ void HariMain(void)
     struct SHEET *sht_window = sheet_alloc(shtctl);
 
     unsigned char *buf_back = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
-    unsigned char *buf_win = (unsigned char *)memman_alloc_4k(memman, 160 * 68);
+    unsigned char *buf_win = (unsigned char *)memman_alloc_4k(memman, 160 * 52);
 
     sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
     unsigned char buf_mouse[256];
     sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
-    sheet_setbuf(sht_window, buf_win, 160, 68, -1);
+    sheet_setbuf(sht_window, buf_win, 160, 52, -1);
 
     init_screen(buf_back, binfo->scrnx, binfo->scrny);
     init_mouse_cursor8(buf_mouse, 99);
-    make_window8(buf_win, 160, 68, "window");
-    putfont8_asc(buf_win, 160, 8, 32, BLACK, "This is the window");
-    // putfont8_asc(buf_win, 160, 24, 44, BLACK, "Window");
+    make_window8(buf_win, 160, 52, "counter");
+    // putfont8_asc(buf_win, 160, 8, 32, BLACK, "This is the window");
     sheet_slide(sht_back, 0, 0);
     int mx = (binfo->scrnx - 16) / 2;
     int my = (binfo->scrny - 28 - 16) / 2;
@@ -64,12 +63,19 @@ void HariMain(void)
     sheet_refresh(sht_back, 0, 0, binfo->scrnx, 66);
 
     int i;
+    int count = 0;
     for (;;)
     {
+        count++;
+        sprintf(s, "cnt : %d", count);
+        boxfill8(buf_win, 160, COL8_C6C6C6, 40, 28, 149, 43);
+        putfont8_asc(buf_win, 160, 40, 28, BLACK, s);
+        sheet_refresh(sht_window, 40, 28, 150, 44);
+
         io_cli();
         if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) == 0)
         {
-            io_stihlt();
+            io_sti();
         }
         else
         {

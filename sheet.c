@@ -128,7 +128,7 @@ void sheet_refresh(struct SHTCTL *ctl)
                 unsigned char c = buf[by * sht->bxsize + bx];
                 if (c != sht->col_inv)
                 {
-                    vram[vy * sht->bxsize + vx] = c;
+                    vram[vy * ctl->xsize + vx] = c;
                 }
             }
         }

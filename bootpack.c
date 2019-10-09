@@ -105,13 +105,13 @@ void HariMain(void)
                     {
                         my = 0;
                     }
-                    if (mx > binfo->scrnx - 16)
+                    if (mx > binfo->scrnx - 1)
                     {
-                        mx = binfo->scrnx - 16;
+                        mx = binfo->scrnx - 1;
                     }
-                    if (my > binfo->scrny - 16)
+                    if (my > binfo->scrny - 1)
                     {
-                        my = binfo->scrny - 16;
+                        my = binfo->scrny - 1;
                     }
                     sprintf(s, "mouse (%d %d)", mx, my);
                     boxfill8(buf_back, binfo->scrnx, COL8_008400, 0, 0, 15 * 8 - 1, 15); /* 座標消す */

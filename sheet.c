@@ -123,6 +123,23 @@ void sheet_refresh(struct SHTCTL *ctl, struct SHEET *sht, int bx0, int by0, int 
 }
 void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1)
 {
+    /* refresh範囲が画面外にはみ出していれば補正 */
+    if (vx0 < 0)
+    {
+        vx0 = 0;
+    }
+    if (vy0 < 0)
+    {
+        vy0 = 0;
+    }
+    if (vx1 > ctl->xsize)
+    {
+        vx1 = ctl->xsize;
+    }
+    if (vy1 > ctl->ysize)
+    {
+        vy1 = ctl->ysize;
+    }
     for (int h = 0; h <= ctl->top; h++)
     {
         unsigned char *vram = ctl->vram;
@@ -173,9 +190,9 @@ void sheet_slide(struct SHTCTL *ctl, struct SHEET *sht, int vx0, int vy0)
     if (sht->height >= 0)
     {
         sheet_refreshsub(ctl, old_vx0, old_vy0,
-                         old_vx0 * sht->bxsize, old_vy0 + sht->bysize);
+                         old_vx0 + sht->bxsize, old_vy0 + sht->bysize);
         sheet_refreshsub(ctl, vx0, vy0,
-                         vx0 * sht->bxsize, vy0 + sht->bysize);
+                         vx0 + sht->bxsize, vy0 + sht->bysize);
     }
     return;
 }

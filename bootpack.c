@@ -3,7 +3,7 @@
 void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-    char s[40], mcursor[256], keybuf[32], mousebuf[128];
+    char s[40], keybuf[32], mousebuf[128];
 
     init_gdtidt();
     init_pic();
@@ -20,25 +20,38 @@ void HariMain(void)
     struct MOUSE_DEC mdec;
     enable_mouse(&mdec);
 
-    init_palette();
-    init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
-    init_mouse_cursor8(mcursor, COL8_008400);
-    int mx = (binfo->scrnx - 16) / 2;
-    int my = (binfo->scrny - 28 - 16) / 2;
-    putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
-    //sprintf(s, "(%d, %d)", mx, my);
-    //putfont8_asc(binfo->vram, binfo->scrnx, 16, 64, WHITE, s);
-    // putfont8_asc(binfo->vram, binfo->scrnx, 8, 8, WHITE, "WDK");
-    // putfont8_asc(binfo->vram, binfo->scrnx, 30, 30, WHITE, "oreore OS");
-
     struct MEMMAM *memman = (struct MEMMAN *)MEM_ADDR;
     unsigned int memtotal = memtest(0x00400000, 0xbfffffff);
     memman_init(memman);
     memman_free_4k(memman, 0x00001000, 0x0009e000);
     memman_free_4k(memman, 0x00400000, memtotal - 0x00400000);
 
+    init_palette();
+
+    struct SHTCTL *shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
+    struct SHEET *sht_back = sheet_alloc(shtctl);
+    struct SHEET *sht_mouse = sheet_alloc(shtctl);
+    unsigned char *buf_back = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
+
+    sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
+    unsigned char buf_mouse[256];
+    sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
+
+    init_screen(buf_back, binfo->scrnx, binfo->scrny);
+    init_mouse_cursor8(buf_mouse, 99);
+    sheet_slide(shtctl, sht_back, 0, 0);
+    int mx = (binfo->scrnx - 16) / 2;
+    int my = (binfo->scrny - 28 - 16) / 2;
+    sheet_slide(shtctl, sht_mouse, mx, my);
+    sheet_updown(shtctl, sht_back, 0);
+    sheet_updown(shtctl, sht_mouse, 1);
+
+    sprintf(s, "mouse (%d, %d)", mx, my);
+    putfont8_asc(buf_back, binfo->scrnx, 0, 0, WHITE, s);
     sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
-    putfont8_asc(binfo->vram, binfo->scrnx, 0, 50, WHITE, s);
+    putfont8_asc(buf_back, binfo->scrnx, 0, 50, WHITE, s);
+
+    sheet_refresh(shtctl);
 
     int i;
     for (;;)
@@ -54,9 +67,10 @@ void HariMain(void)
             {
                 i = fifo8_get(&keyfifo);
                 io_sti();
-                sprintf(s, "%x", i);
-                boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 0, 16, 15, 31);
-                putfont8_asc(binfo->vram, binfo->scrnx, 0, 16, WHITE, s);
+                sprintf(s, "keycode %x", i);
+                boxfill8(buf_back, binfo->scrnx, COL8_008400, 0, 16, 15 * 8 - 1, 31);
+                putfont8_asc(buf_back, binfo->scrnx, 0, 16, WHITE, s);
+                sheet_refresh(shtctl);
             }
             else if (fifo8_status(&mousefifo) != 0)
             {
@@ -77,10 +91,9 @@ void HariMain(void)
                     {
                         s[2] = 'C';
                     }
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 32, 32, 32 + 15 * 8 - 1, 47);
-                    putfont8_asc(binfo->vram, binfo->scrnx, 32, 32, WHITE, s);
+                    boxfill8(buf_back, binfo->scrnx, COL8_008400, 32, 32, 32 + 15 * 8 - 1, 47);
+                    putfont8_asc(buf_back, binfo->scrnx, 32, 32, WHITE, s);
                     /* マウスカーソルの移動 */
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, mx, my, mx + 15, my + 15);
                     mx += mdec.x;
                     my += mdec.y;
                     if (mx < 0)
@@ -99,10 +112,11 @@ void HariMain(void)
                     {
                         my = binfo->scrny - 16;
                     }
-                    sprintf(s, "(%d %d)", mx, my);
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008400, 0, 0, 79, 15);      /* 座標消す */
-                    putfont8_asc(binfo->vram, binfo->scrnx, 0, 0, WHITE, s);             /* 座標書く */
-                    putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16); /* マウス描く */
+                    sprintf(s, "mouse (%d %d)", mx, my);
+                    boxfill8(buf_back, binfo->scrnx, COL8_008400, 0, 0, 32 + 15 * 8 - 1, 15); /* 座標消す */
+                    putfont8_asc(buf_back, binfo->scrnx, 0, 0, WHITE, s);                     /* 座標書く */
+                    // putblock8_8(buf_back, binfo->scrnx, 16, 16, mx, my, buf_mouse, 16);
+                    sheet_slide(shtctl, sht_mouse, mx, my); /* refresh 含む */
                 }
             }
         }

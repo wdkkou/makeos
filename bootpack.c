@@ -51,7 +51,7 @@ void HariMain(void)
     sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
     putfont8_asc(buf_back, binfo->scrnx, 0, 50, WHITE, s);
 
-    sheet_refresh(shtctl);
+    sheet_refresh(shtctl, sht_back, 0, 0, binfo->scrnx, 66);
 
     int i;
     for (;;)
@@ -70,7 +70,7 @@ void HariMain(void)
                 sprintf(s, "keycode %x", i);
                 boxfill8(buf_back, binfo->scrnx, COL8_008400, 0, 16, 15 * 8 - 1, 31);
                 putfont8_asc(buf_back, binfo->scrnx, 0, 16, WHITE, s);
-                sheet_refresh(shtctl);
+                sheet_refresh(shtctl, sht_back, 0, 16, 15 * 8 - 1, 32);
             }
             else if (fifo8_status(&mousefifo) != 0)
             {
@@ -93,6 +93,7 @@ void HariMain(void)
                     }
                     boxfill8(buf_back, binfo->scrnx, COL8_008400, 32, 32, 32 + 15 * 8 - 1, 47);
                     putfont8_asc(buf_back, binfo->scrnx, 32, 32, WHITE, s);
+                    sheet_refresh(shtctl, sht_back, 32, 32, 32 + 15 * 8, 48);
                     /* マウスカーソルの移動 */
                     mx += mdec.x;
                     my += mdec.y;
@@ -113,9 +114,10 @@ void HariMain(void)
                         my = binfo->scrny - 16;
                     }
                     sprintf(s, "mouse (%d %d)", mx, my);
-                    boxfill8(buf_back, binfo->scrnx, COL8_008400, 0, 0, 32 + 15 * 8 - 1, 15); /* 座標消す */
-                    putfont8_asc(buf_back, binfo->scrnx, 0, 0, WHITE, s);                     /* 座標書く */
+                    boxfill8(buf_back, binfo->scrnx, COL8_008400, 0, 0, 15 * 8 - 1, 15); /* 座標消す */
+                    putfont8_asc(buf_back, binfo->scrnx, 0, 0, WHITE, s);                /* 座標書く */
                     // putblock8_8(buf_back, binfo->scrnx, 16, 16, mx, my, buf_mouse, 16);
+                    sheet_refresh(shtctl, sht_back, 0, 0, 15 * 8 - 1, 16);
                     sheet_slide(shtctl, sht_mouse, mx, my); /* refresh 含む */
                 }
             }

@@ -7,9 +7,9 @@
     GLOBAL  io_load_eflags, io_store_eflags
     GLOBAL  load_gdtr, load_idtr
     GLOBAL  load_cr0, store_cr0
-    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27
+    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20
     GLOBAL  memtest_sub
-    EXTERN  inthandler21, inthandler2c, inthandler27
+    EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20
 
 bits 32
 section .text
@@ -97,6 +97,22 @@ store_cr0:
         mov eax, [esp+4]
         mov cr0, eax
         ret
+
+asm_inthandler20:
+        push es
+        push ds
+        pushad
+        mov eax, esp
+        push eax
+        mov ax, ss
+        mov ds, ax
+        mov es,ax
+        call inthandler20
+        pop eax
+        popad
+        pop ds
+        pop es
+        iretd
 
 asm_inthandler21:
         push es

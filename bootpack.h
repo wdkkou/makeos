@@ -186,12 +186,18 @@ void sheet_slide(struct SHEET *sht, int vx0, int vy0);
 void sheet_free(struct SHEET *sht);
 
 /* timer.c */
+#define MAX_TIMES 500
+
+struct TIMER
+{
+    unsigned int timeout, flags;
+    struct FIFO8 *fifo;
+    unsigned char data;
+};
 struct TIMERCTL
 {
     unsigned int count;
-    unsigned int timeout;
-    struct FIFO8 *fifo;
-    unsigned char data;
+    struct TIMER timer[MAX_TIMES];
 };
 
 extern struct TIMERCTL timerctl;

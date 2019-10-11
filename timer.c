@@ -14,6 +14,8 @@ void init_pit(void)
     io_out8(PIT_CNT0, 0x2e);
 
     timerctl.count = 0;
+    timerctl.next = 0xffffffff; /* 最初は作動中のタイマが存在しない */
+
     for (int i = 0; i < MAX_TIMES; i++)
     {
         timerctl.timer[i].flags = 0;
@@ -52,6 +54,13 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
 {
     timer->timeout = timeout + timerctl.count;
     timer->flags = TIMER_FLAGS_USING;
+
+    if (timerctl.next > timer->timeout)
+    {
+        /* 次回の時刻を更新 */
+        timerctl.next = timer->timeout;
+    }
+
     return;
 }
 
@@ -62,14 +71,29 @@ void inthandler20(int *esp)
 
     timerctl.count++;
 
+    if (timerctl.next > timerctl.count)
+    {
+        /* まだ次の時刻になっていいないため、終了 */
+        return;
+    }
+    timerctl.next = 0xffffffff;
+
     for (int i = 0; i < MAX_TIMES; i++)
     {
         if (timerctl.timer[i].flags == TIMER_FLAGS_USING)
         {
             if (timerctl.timer[i].timeout <= timerctl.count)
             {
+                /* タイムアウト */
                 timerctl.timer[i].flags = TIMER_FLAGS_ALLOC;
                 fifo8_put(timerctl.timer[i].fifo, timerctl.timer[i].data);
+            }
+            else
+            {
+                if (timerctl.next > timerctl.timer[i].timeout)
+                {
+                    timerctl.next = timerctl.timer[i].timeout;
+                }
             }
         }
     }

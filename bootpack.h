@@ -181,6 +181,7 @@ void sheet_setbuf(struct SHEET *sht, unsigned char *buf, int xsize, int ysize, i
 void sheet_updown(struct SHEET *sht, int height);
 void sheet_refresh(struct SHEET *sht, int bx0, int by0, int bx1, int by1);
 void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0, int h1);
+void sheet_refreshmap(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0);
 void sheet_slide(struct SHEET *sht, int vx0, int vy0);
 void sheet_free(struct SHEET *sht);
 
@@ -188,9 +189,13 @@ void sheet_free(struct SHEET *sht);
 struct TIMERCTL
 {
     unsigned int count;
+    unsigned int timeout;
+    struct FIFO8 *fifo;
+    unsigned char data;
 };
 
 extern struct TIMERCTL timerctl;
 
 void init_pit(void);
 void inthandler20(int *esp);
+void settimer(unsigned int timecout, struct FIFO8 *fifo, unsigned char data);

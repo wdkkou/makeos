@@ -4,7 +4,7 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
 void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
-    char s[40], keybuf[32], mousebuf[128], timerbuf[8];
+    char s[40], keybuf[32], mousebuf[128];
 
     init_gdtidt();
     init_pic();
@@ -18,9 +18,24 @@ void HariMain(void)
     io_out8(PIC0_IMR, 0xf8); /* PITとPIC1とキーボードを許可 */
     io_out8(PIC1_IMR, 0xef); /* マウスを許可 */
 
-    struct FIFO8 timerfifo;
-    fifo8_init(&timerfifo, 8, timerbuf);
-    settimer(1000, &timerfifo, 1);
+    struct TIMER *timer1, *timer2, *timer3;
+    struct FIFO8 timerfifo1, timerfifo2, timerfifo3;
+    char timerbuf1[8], timerbuf2[8], timerbuf3[8];
+
+    fifo8_init(&timerfifo1, 8, timerbuf1);
+    timer1 = timer_alloc();
+    timer_init(timer1, &timerfifo1, 1);
+    timer_settime(timer1, 1000);
+
+    fifo8_init(&timerfifo2, 8, timerbuf2);
+    timer2 = timer_alloc();
+    timer_init(timer2, &timerfifo2, 1);
+    timer_settime(timer2, 300);
+
+    fifo8_init(&timerfifo3, 8, timerbuf3);
+    timer3 = timer_alloc();
+    timer_init(timer3, &timerfifo3, 1);
+    timer_settime(timer3, 50);
 
     init_keyboard();
 
@@ -77,7 +92,9 @@ void HariMain(void)
         sheet_refresh(sht_window, 40, 28, 150, 44);
 
         io_cli();
-        if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(&timerfifo) == 0)
+        if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) +
+                fifo8_status(&timerfifo1) + fifo8_status(&timerfifo2) + fifo8_status(&timerfifo3) ==
+            0)
         {
             io_sti();
         }
@@ -140,12 +157,36 @@ void HariMain(void)
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
                 }
             }
-            else if (fifo8_status(&timerfifo) != 0)
+            else if (fifo8_status(&timerfifo1) != 0)
             {
-                i = fifo8_get(&timerfifo);
+                i = fifo8_get(&timerfifo1);
                 io_sti();
-                putfont8_asc(buf_back, binfo->scrnx, 0, 64, WHITE, "10 sec");
+                putfont8_asc(buf_back, binfo->scrnx, 0, 80, WHITE, "10 sec");
+                sheet_refresh(sht_back, 0, 80, 56, 96);
+            }
+            else if (fifo8_status(&timerfifo2) != 0)
+            {
+                i = fifo8_get(&timerfifo2);
+                io_sti();
+                putfont8_asc(buf_back, binfo->scrnx, 0, 64, WHITE, "3 sec");
                 sheet_refresh(sht_back, 0, 64, 56, 80);
+            }
+            else if (fifo8_status(&timerfifo3) != 0)
+            {
+                i = fifo8_get(&timerfifo3);
+                io_sti();
+                if (i != 0)
+                {
+                    timer_init(timer3, &timerfifo3, 0);
+                    boxfill8(buf_back, binfo->scrnx, WHITE, 8, 96, 15, 111);
+                }
+                else
+                {
+                    timer_init(timer3, &timerfifo3, 1);
+                    boxfill8(buf_back, binfo->scrnx, COL8_008400, 8, 96, 15, 111);
+                }
+                timer_settime(timer3, 50);
+                sheet_refresh(sht_back, 8, 96, 16, 112);
             }
         }
     }

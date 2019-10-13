@@ -21,22 +21,20 @@ void HariMain(void)
     io_out8(PIC1_IMR, 0xef); /* マウスを許可 */
 
     struct TIMER *timer1, *timer2, *timer3;
-    struct FIFO8 timerfifo1, timerfifo2, timerfifo3;
-    char timerbuf1[8], timerbuf2[8], timerbuf3[8];
+    struct FIFO8 timerfifo;
+    char timerbuf[8];
 
-    fifo8_init(&timerfifo1, 8, timerbuf1);
+    fifo8_init(&timerfifo, 8, timerbuf);
     timer1 = timer_alloc();
-    timer_init(timer1, &timerfifo1, 1);
+    timer_init(timer1, &timerfifo, 10);
     timer_settime(timer1, 1000);
 
-    fifo8_init(&timerfifo2, 8, timerbuf2);
     timer2 = timer_alloc();
-    timer_init(timer2, &timerfifo2, 1);
+    timer_init(timer2, &timerfifo, 3);
     timer_settime(timer2, 300);
 
-    fifo8_init(&timerfifo3, 8, timerbuf3);
     timer3 = timer_alloc();
-    timer_init(timer3, &timerfifo3, 1);
+    timer_init(timer3, &timerfifo, 1);
     timer_settime(timer3, 50);
 
     init_keyboard();
@@ -91,9 +89,7 @@ void HariMain(void)
         putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 10);
 
         io_cli();
-        if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) +
-                fifo8_status(&timerfifo1) + fifo8_status(&timerfifo2) + fifo8_status(&timerfifo3) ==
-            0)
+        if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(&timerfifo) == 0)
         {
             io_sti();
         }
@@ -150,34 +146,33 @@ void HariMain(void)
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
                 }
             }
-            else if (fifo8_status(&timerfifo1) != 0)
+            else if (fifo8_status(&timerfifo) != 0)
             {
-                i = fifo8_get(&timerfifo1);
+                i = fifo8_get(&timerfifo);
                 io_sti();
-                putfont8_asc_sht(sht_back, 0, 80, WHITE, COL8_008400, "10 sec", 7);
-            }
-            else if (fifo8_status(&timerfifo2) != 0)
-            {
-                i = fifo8_get(&timerfifo2);
-                io_sti();
-                putfont8_asc_sht(sht_back, 0, 64, WHITE, COL8_008400, "3 sec", 6);
-            }
-            else if (fifo8_status(&timerfifo3) != 0)
-            {
-                i = fifo8_get(&timerfifo3);
-                io_sti();
-                if (i != 0)
+                if (i == 10)
                 {
-                    timer_init(timer3, &timerfifo3, 0);
-                    boxfill8(buf_back, binfo->scrnx, WHITE, 8, 96, 15, 111);
+                    putfont8_asc_sht(sht_back, 0, 80, WHITE, COL8_008400, "10 sec", 7);
+                }
+                else if (i == 3)
+                {
+                    putfont8_asc_sht(sht_back, 0, 64, WHITE, COL8_008400, "3 sec", 6);
                 }
                 else
                 {
-                    timer_init(timer3, &timerfifo3, 1);
-                    boxfill8(buf_back, binfo->scrnx, COL8_008400, 8, 96, 15, 111);
+                    if (i != 0)
+                    {
+                        timer_init(timer3, &timerfifo, 0);
+                        boxfill8(buf_back, binfo->scrnx, WHITE, 8, 96, 15, 111);
+                    }
+                    else
+                    {
+                        timer_init(timer3, &timerfifo, 1);
+                        boxfill8(buf_back, binfo->scrnx, COL8_008400, 8, 96, 15, 111);
+                    }
+                    timer_settime(timer3, 50);
+                    sheet_refresh(sht_back, 8, 96, 16, 112);
                 }
-                timer_settime(timer3, 50);
-                sheet_refresh(sht_back, 8, 96, 16, 112);
             }
         }
     }

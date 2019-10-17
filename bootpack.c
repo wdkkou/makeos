@@ -83,10 +83,13 @@ void HariMain(void)
     putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
     int i;
+    int count = 0;
     for (;;)
     {
-        sprintf(s, "cnt : %d", timerctl.count);
-        putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 10);
+        count++;
+
+        // sprintf(s, "cnt : %d", timerctl.count);
+        // putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 10);
 
         io_cli();
         if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(&timerfifo) == 0)
@@ -153,10 +156,13 @@ void HariMain(void)
                 if (i == 10)
                 {
                     putfont8_asc_sht(sht_back, 0, 80, WHITE, COL8_008400, "10 sec", 7);
+                    sprintf(s, "%d", count);
+                    putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 10);
                 }
                 else if (i == 3)
                 {
                     putfont8_asc_sht(sht_back, 0, 64, WHITE, COL8_008400, "3 sec", 6);
+                    count = 0;
                 }
                 else
                 {

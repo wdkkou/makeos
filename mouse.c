@@ -1,14 +1,15 @@
 #include "bootpack.h"
 
-struct FIFO8 mousefifo;
+struct FIFO32 *mousefifo;
+int mousedata0;
 /* ps/2 mouse 割り込み */
 void inthandler2c(int *esp)
 {
-    unsigned char data;
+    int data;
     io_out8(PIC1_OCW2, 0x64); /* IRQ-12受付完了をPIC1に通知 */
     io_out8(PIC0_OCW2, 0x62); /* IRQ-02受付完了をPIC0に通知 */
     data = io_in8(PORT_KEYDAT);
-    fifo8_put(&mousefifo, data);
+    fifo32_put(&mousefifo, data);
     return;
 }
 
@@ -24,7 +25,7 @@ void enable_mouse(struct MOUSE_DEC *mdec)
     mdec->phase = 0;
     return;
 }
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data)
+int mouse_decode(struct MOUSE_DEC *mdec, int data)
 {
     if (mdec->phase == 0)
     {

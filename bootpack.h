@@ -104,20 +104,20 @@ void init_pic(void);
 #define PIC1_ICW4 0x00a1
 
 /* fifo.c */
-struct FIFO8
+struct FIFO32
 {
-    unsigned char *buf;
+    int *buf;
     int p, q, size, free, flags;
 };
-void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf);
-int fifo8_put(struct FIFO8 *fifo, unsigned char data);
-int fifo8_get(struct FIFO8 *fifo);
-int fifo8_status(struct FIFO8 *fifo);
+void fifo32_init(struct FIFO32 *fifo, int size, int *buf);
+int fifo32_put(struct FIFO32 *fifo, int data);
+int fifo32_get(struct FIFO32 *fifo);
+int fifo32_status(struct FIFO32 *fifo);
 
 /* keyboard.c */
 void inthandler21(int *esp);
 void wait_KBC_sendready(void);
-void init_keyboard(void);
+void init_keyboard(struct FIFO32 *fifo, int data0);
 extern struct FIFO8 keyfifo;
 #define PORT_KEYDAT 0x0060
 #define PORT_KEYCMD 0x0064

@@ -18,6 +18,10 @@ void HariMain(void)
 
     init_pit();
 
+    struct MOUSE_DEC mdec;
+    init_keyboard(&fifo, 256);
+    enable_mouse(&fifo, 512, &mdec);
+
     io_out8(PIC0_IMR, 0xf8); /* PITとPIC1とキーボードを許可 */
     io_out8(PIC1_IMR, 0xef); /* マウスを許可 */
 
@@ -35,10 +39,6 @@ void HariMain(void)
     timer3 = timer_alloc();
     timer_init(timer3, &fifo, 1);
     timer_settime(timer3, 50);
-
-    struct MOUSE_DEC mdec;
-    init_keyboard(&fifo, 256);
-    enable_mouse(&fifo, 512, &mdec);
 
     struct MEMMAM *memman = (struct MEMMAN *)MEM_ADDR;
     unsigned int memtotal = memtest(0x00400000, 0xbfffffff);

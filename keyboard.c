@@ -9,7 +9,7 @@ void inthandler21(int *esp)
     int data;
     io_out8(PIC0_OCW2, 0x61); /* IRQ-01受付完了をPIC0に通知 */
     data = io_in8(PORT_KEYDAT);
-    fifo32_put(&keyfifo, data + keydata0);
+    fifo32_put(keyfifo, data + keydata0);
     return;
 }
 

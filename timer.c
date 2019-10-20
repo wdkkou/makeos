@@ -14,13 +14,18 @@ void init_pit(void)
     io_out8(PIT_CNT0, 0x2e);
 
     timerctl.count = 0;
-    timerctl.next = 0xffffffff; /* 最初は作動中のタイマが存在しない */
-    timerctl.using = 0;
 
     for (int i = 0; i < MAX_TIMES; i++)
     {
         timerctl.timers0[i].flags = 0;
     }
+
+    struct TIMER *t = timer_alloc();
+    t->timeout = 0xffffffff;
+    t->flags = TIMER_FLAGS_USING;
+    t->next = 0;
+    timerctl.t0 = t;
+    timerctl.next = 0xffffffff; /* 番兵の時刻 */
 
     return;
 }
@@ -58,18 +63,6 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
     int eflags = io_load_eflags();
     io_cli();
 
-    timerctl.using ++;
-    /*　動作中のタイマがこれ1つの場合 */
-    if (timerctl.using == 1)
-    {
-        timerctl.t0 = timer;
-        timer->next = 0;
-        timerctl.next = timer->timeout;
-
-        io_store_eflags(eflags);
-        return;
-    }
-
     struct TIMER *t = timerctl.t0;
     /*　先頭に入れる場合 */
     if (timer->timeout <= t->timeout)
@@ -87,10 +80,7 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
     {
         s = t;
         t = t->next;
-        if (t == 0)
-        {
-            break;
-        }
+        /* sとtの間に入れる場合 */
         if (timer->timeout <= t->timeout)
         {
             s->next = timer;
@@ -100,12 +90,6 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
             return;
         }
     }
-
-    s->next = timer;
-    timer->next = 0;
-
-    io_store_eflags(eflags);
-    return;
 }
 
 void inthandler20(int *esp)
@@ -122,12 +106,10 @@ void inthandler20(int *esp)
     }
 
     struct TIMER *timer = timerctl.t0;
-    int index = 0;
-    for (int i = 0; i < timerctl.using; i++)
+    while (1)
     {
         if (timer->timeout > timerctl.count)
         {
-            index = i;
             break;
         }
         /* タイムアウト */
@@ -136,19 +118,8 @@ void inthandler20(int *esp)
         timer = timer->next;
     }
 
-    /* ちょうどindex個のタイマがタムアウトしたので、残りをずらしている */
-    timerctl.using -= index;
-
     timerctl.t0 = timer;
-
-    if (timerctl.using > 0)
-    {
-        timerctl.next = timerctl.t0->timeout;
-    }
-    else
-    {
-        timerctl.next = 0xffffffff;
-    }
+    timerctl.next = timerctl.t0->timeout;
 
     return;
 }

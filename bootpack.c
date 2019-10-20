@@ -7,6 +7,13 @@ void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     char s[40];
+    static char keytable[0x54] = {
+        0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0, 0,
+        'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0, 0, 'A', 'S',
+        'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0, 0, ']', 'Z', 'X', 'C', 'V',
+        'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
+        '2', '3', '0', '.'};
 
     init_gdtidt();
     init_pic();
@@ -80,19 +87,14 @@ void HariMain(void)
     putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
     int i;
-    int count = 0;
     for (;;)
     {
-        count++;
-
-        sprintf(s, "fifo : %d", fifo32_status(&fifo));
-        putfont8_asc_sht(sht_back, 0, 120, WHITE, COL8_008400, s, 10);
 
         io_cli();
 
         if (fifo32_status(&fifo) == 0)
         {
-            io_sti();
+            io_stihlt();
         }
         else
         {
@@ -102,6 +104,16 @@ void HariMain(void)
             {
                 sprintf(s, "keycode %x", i - 256);
                 putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
+
+                if (i < 256 + 0x54)
+                {
+                    if (keytable[i - 256] != 0)
+                    {
+                        s[0] = keytable[i - 256];
+                        s[1] = 0;
+                        putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 1);
+                    }
+                }
             }
             else if (512 <= i && i < 768)
             {
@@ -148,13 +160,10 @@ void HariMain(void)
             else if (i == 10)
             {
                 putfont8_asc_sht(sht_back, 0, 80, WHITE, COL8_008400, "10 sec", 7);
-                sprintf(s, "%d", count);
-                putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 10);
             }
             else if (i == 3)
             {
                 putfont8_asc_sht(sht_back, 0, 64, WHITE, COL8_008400, "3 sec", 6);
-                count = 0;
             }
             else if (i == 1)
             {

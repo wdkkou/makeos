@@ -26,7 +26,6 @@ void HariMain(void)
     io_out8(PIC1_IMR, 0xef); /* マウスを許可 */
 
     struct TIMER *timer1, *timer2, *timer3;
-    char timerbuf[8];
 
     timer1 = timer_alloc();
     timer_init(timer1, &fifo, 10);
@@ -86,10 +85,11 @@ void HariMain(void)
     {
         count++;
 
-        // sprintf(s, "cnt : %d", timerctl.count);
-        // putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 10);
+        sprintf(s, "fifo : %d", fifo32_status(&fifo));
+        putfont8_asc_sht(sht_back, 0, 120, WHITE, COL8_008400, s, 10);
 
         io_cli();
+
         if (fifo32_status(&fifo) == 0)
         {
             io_sti();

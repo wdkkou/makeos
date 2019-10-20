@@ -15,13 +15,14 @@ VRAM	EQU		0x0ff8			; グラフィックバッファの開始番地
 
 	ORG		0xc200			; このプログラムがどこに読み込まれるのか
 
-	MOV		AL,0x13			; VGAグラフィックス、320x200x8bitカラー
-	MOV		AH,0x00
+; 画面モードを設定
+        MOV             BX,0x4105               ; VBEの640×480
+        MOV             AX,0x4f02
 	INT		0x10
 	MOV		BYTE [VMODE],8	; 画面モードをメモする
-	MOV		WORD [SCRNX],320
-	MOV		WORD [SCRNY],200
-	MOV		DWORD [VRAM],0x000a0000
+	MOV		WORD [SCRNX],1024
+	MOV		WORD [SCRNY],768
+	MOV		DWORD [VRAM],0xfd000000
 
 ;キーボードのLED状態をBIOSに教えてもらう
 

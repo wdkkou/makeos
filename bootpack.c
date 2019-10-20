@@ -105,6 +105,7 @@ void HariMain(void)
         {
             i = fifo32_get(&fifo);
             io_sti();
+            /* キーボードデータ */
             if (256 <= i && i < 512)
             {
                 sprintf(s, "keycode %x", i - 256);
@@ -131,6 +132,7 @@ void HariMain(void)
                 boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
                 sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
             }
+            /* マウスデータ */
             else if (512 <= i && i < 768)
             {
                 if (mouse_decode(&mdec, i - 512) != 0)
@@ -171,6 +173,11 @@ void HariMain(void)
                     sprintf(s, "mouse (%d, %d)", mx, my);
                     putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 17);
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
+
+                    if ((mdec.btn & 0x01) != 0)
+                    {
+                        sheet_slide(sht_window, mx - 80, my - 8);
+                    }
                 }
             }
             else if (i == 10)

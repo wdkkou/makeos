@@ -14,13 +14,18 @@ void init_pit(void)
     io_out8(PIT_CNT0, 0x2e);
 
     timerctl.count = 0;
-    timerctl.next = 0xffffffff; /* 最初は作動中のタイマが存在しない */
-    timerctl.using = 0;
 
     for (int i = 0; i < MAX_TIMES; i++)
     {
         timerctl.timers0[i].flags = 0;
     }
+
+    struct TIMER *t = timer_alloc();
+    t->timeout = 0xffffffff;
+    t->flags = TIMER_FLAGS_USING;
+    t->next = 0;
+    timerctl.t0 = t;
+    timerctl.next = 0xffffffff; /* 番兵の時刻 */
 
     return;
 }
@@ -44,7 +49,7 @@ void timer_free(struct TIMER *timer)
     return;
 }
 
-void timer_init(struct TIMER *timer, struct FIFO8 *fifo, unsigned char data)
+void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data)
 {
     timer->fifo = fifo;
     timer->data = data;
@@ -57,30 +62,34 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
     timer->flags = TIMER_FLAGS_USING;
     int eflags = io_load_eflags();
     io_cli();
-    /* どこに入れるべきか探す */
-    int index = 0;
-    for (int i = 0; i < timerctl.using; i++)
+
+    struct TIMER *t = timerctl.t0;
+    /*　先頭に入れる場合 */
+    if (timer->timeout <= t->timeout)
     {
-        if (timerctl.timers[i]->timeout >= timer->timeout)
+        timerctl.t0 = timer;
+        timer->next = t;
+        timerctl.next = timer->timeout;
+
+        io_store_eflags(eflags);
+        return;
+    }
+
+    struct TIMER *s;
+    while (1)
+    {
+        s = t;
+        t = t->next;
+        /* sとtの間に入れる場合 */
+        if (timer->timeout <= t->timeout)
         {
-            index = i;
-            break;
+            s->next = timer;
+            timer->next = t;
+
+            io_store_eflags(eflags);
+            return;
         }
     }
-
-    /* 後ろにずらしている */
-    for (int j = timerctl.using; j > index; j--)
-    {
-        timerctl.timers[j] = timerctl.timers[j - 1];
-    }
-    timerctl.using ++;
-    /* 空いた場所にtimerを入れる */
-    timerctl.timers[index] = timer;
-    timerctl.next = timerctl.timers[0]->timeout;
-
-    io_store_eflags(eflags);
-
-    return;
 }
 
 void inthandler20(int *esp)
@@ -96,34 +105,21 @@ void inthandler20(int *esp)
         return;
     }
 
-    int index = 0;
-    for (int i = 0; i < timerctl.using; i++)
+    struct TIMER *timer = timerctl.t0;
+    while (1)
     {
-        if (timerctl.timers[i]->timeout > timerctl.count)
+        if (timer->timeout > timerctl.count)
         {
-            index = i;
             break;
         }
         /* タイムアウト */
-        timerctl.timers[i]->flags = TIMER_FLAGS_ALLOC;
-        fifo8_put(timerctl.timers[i]->fifo, timerctl.timers[i]->data);
+        timer->flags = TIMER_FLAGS_ALLOC;
+        fifo32_put(timer->fifo, timer->data);
+        timer = timer->next;
     }
 
-    /* ちょうどindex個のタイマがタムアウトしたので、残りをずらしている */
-    timerctl.using -= index;
-    for (int j = 0; j < timerctl.using; j++)
-    {
-        timerctl.timers[j] = timerctl.timers[index + j];
-    }
-
-    if (timerctl.using > 0)
-    {
-        timerctl.next = timerctl.timers[0]->timeout;
-    }
-    else
-    {
-        timerctl.next = 0xffffffff;
-    }
+    timerctl.t0 = timer;
+    timerctl.next = timerctl.t0->timeout;
 
     return;
 }

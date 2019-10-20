@@ -4,7 +4,7 @@
 
 #define FLAGS_OVERRUN 0x0001
 /* FIFOの初期化 */
-void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf)
+void fifo32_init(struct FIFO32 *fifo, int size, int *buf)
 {
     fifo->size = size;
     fifo->buf = buf;
@@ -15,7 +15,7 @@ void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf)
     return;
 }
 /* FIFOにデータを渡し，蓄える */
-int fifo8_put(struct FIFO8 *fifo, unsigned char data)
+int fifo32_put(struct FIFO32 *fifo, int data)
 {
     /* バッファの空きがない際には-1を返す */
     if (fifo->free == 0)
@@ -34,7 +34,7 @@ int fifo8_put(struct FIFO8 *fifo, unsigned char data)
 }
 
 /* FIFOからデータを1つ取り出す */
-int fifo8_get(struct FIFO8 *fifo)
+int fifo32_get(struct FIFO32 *fifo)
 {
     /* バッファのデータが空っぽの際には-1を返す */
     if (fifo->free == fifo->size)
@@ -51,7 +51,7 @@ int fifo8_get(struct FIFO8 *fifo)
     return data;
 }
 /* 溜まっているデータの数 */
-int fifo8_status(struct FIFO8 *fifo)
+int fifo32_status(struct FIFO32 *fifo)
 {
     return fifo->size - fifo->free;
 }

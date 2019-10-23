@@ -10,7 +10,7 @@
     GLOBAL  load_tr
     GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20
     GLOBAL  memtest_sub
-    GLOBAL  taskswitch3,taskswitch4
+    GLOBAL  farjmp
     EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20
 
 bits 32
@@ -201,10 +201,6 @@ mts_fin:
         pop edi
         ret
 
-taskswitch3:
-        jmp 3*8:0
-        ret
-
-taskswitch4:
-        jmp 4*8:0
+farjmp:
+        jmp far [esp+4]
         ret

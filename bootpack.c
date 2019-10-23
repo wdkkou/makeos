@@ -45,7 +45,7 @@ void HariMain(void)
     io_out8(PIC0_IMR, 0xf8); /* PITとPIC1とキーボードを許可 */
     io_out8(PIC1_IMR, 0xef); /* マウスを許可 */
 
-    struct TIMER *timer1, *timer2, *timer3;
+    struct TIMER *timer1, *timer2, *timer3, *timer_ts;
 
     timer1 = timer_alloc();
     timer_init(timer1, &fifo, 10);
@@ -58,6 +58,10 @@ void HariMain(void)
     timer3 = timer_alloc();
     timer_init(timer3, &fifo, 1);
     timer_settime(timer3, 50);
+
+    timer_ts = timer_alloc();
+    timer_init(timer_ts, &fifo, 2);
+    timer_settime(timer_ts, 2);
 
     struct MEMMAM *memman = (struct MEMMAN *)MEM_ADDR;
     unsigned int memtotal = memtest(0x00400000, 0xbfffffff);
@@ -128,6 +132,7 @@ void HariMain(void)
     tss_b.ds = 1 * 8;
     tss_b.fs = 1 * 8;
     tss_b.gs = 1 * 8;
+    *((int *)0xfec) = (int)sht_back;
 
     int i;
     for (;;)
@@ -143,8 +148,13 @@ void HariMain(void)
         {
             i = fifo32_get(&fifo);
             io_sti();
+            if (i == 2)
+            {
+                farjmp(0, 4 * 8);
+                timer_settime(timer_ts, 2);
+            }
             /* キーボードデータ */
-            if (256 <= i && i < 512)
+            else if (256 <= i && i < 512)
             {
                 sprintf(s, "keycode %x", i - 256);
                 putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
@@ -221,8 +231,6 @@ void HariMain(void)
             else if (i == 10)
             {
                 putfont8_asc_sht(sht_back, 0, 80, WHITE, COL8_008400, "10 sec", 7);
-
-                taskswitch4();
             }
             else if (i == 3)
             {
@@ -334,18 +342,24 @@ void task_b_main(void)
     int fifobuf[128];
     fifo32_init(&fifo, 128, fifobuf);
 
-    struct TIMER *timer;
-    timer = timer_alloc();
-    timer_init(timer, &fifo, 1);
-    timer_settime(timer, 500);
+    struct TIMER *timer_ts;
+    timer_ts = timer_alloc();
+    timer_init(timer_ts, &fifo, 1);
+    timer_settime(timer_ts, 2);
 
+    struct SHEET *sht_back = (struct SHEET *)*((int *)0x0fec);
+    char s[10];
+    int count = 0;
     while (1)
     {
+        count++;
+        sprintf(s, "cnt : %d", count);
+        putfont8_asc_sht(sht_back, 0, 144, WHITE, COL8_008400, s, 10);
+
         io_cli();
         if (fifo32_status(&fifo) == 0)
         {
             io_sti();
-            io_hlt();
         }
         else
         {
@@ -353,7 +367,8 @@ void task_b_main(void)
             io_sti();
             if (i == 1)
             {
-                taskswitch3();
+                farjmp(0, 3 * 8);
+                timer_settime(timer_ts, 2);
             }
         }
     }

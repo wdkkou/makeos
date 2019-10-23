@@ -342,7 +342,7 @@ void task_b_main(struct SHEET *sht_back)
     int fifobuf[128];
     fifo32_init(&fifo, 128, fifobuf);
 
-    struct TIMER *timer_ts, *timer_put;
+    struct TIMER *timer_ts, *timer_put, *timer_1s;
     timer_ts = timer_alloc();
     timer_init(timer_ts, &fifo, 2);
     timer_settime(timer_ts, 2);
@@ -351,8 +351,12 @@ void task_b_main(struct SHEET *sht_back)
     timer_init(timer_put, &fifo, 1);
     timer_settime(timer_put, 1);
 
+    timer_1s = timer_alloc();
+    timer_init(timer_1s, &fifo, 100);
+    timer_settime(timer_1s, 100);
+
     char s[10];
-    int count = 0;
+    int count = 0, count0 = 0;
     while (1)
     {
         count++;
@@ -375,6 +379,13 @@ void task_b_main(struct SHEET *sht_back)
             {
                 farjmp(0, 3 * 8);
                 timer_settime(timer_ts, 2);
+            }
+            else if (i == 100)
+            {
+                sprintf(s, "cnt : %d", count0);
+                putfont8_asc_sht(sht_back, 0, 128, WHITE, COL8_008400, s, 10);
+                count0 = count;
+                // timer_settime(timer_1s, 100);
             }
         }
     }

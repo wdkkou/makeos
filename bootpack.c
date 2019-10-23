@@ -3,10 +3,19 @@
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
 void putfont8_asc_sht(struct SHEET *sht, int x, int y,
                       int c, int b, char *s, int l);
+void make_textbox8(struct SHEET *sht, int x0, int y0,
+                   int sx, int sy, int c);
 void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     char s[40];
+    static char keytable[0x54] = {
+        0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0, 0,
+        'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0, 0, 'A', 'S',
+        'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0, 0, ']', 'Z', 'X', 'C', 'V',
+        'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
+        '2', '3', '0', '.'};
 
     init_gdtidt();
     init_pic();
@@ -62,7 +71,10 @@ void HariMain(void)
 
     init_screen(buf_back, binfo->scrnx, binfo->scrny);
     init_mouse_cursor8(buf_mouse, 99);
-    make_window8(buf_win, 160, 52, "counter");
+    make_window8(buf_win, 160, 52, "window");
+    make_textbox8(sht_window, 8, 28, 144, 16, WHITE);
+    int cursor_x = 8;
+    int cursor_c = WHITE;
     // putfont8_asc(buf_win, 160, 8, 32, BLACK, "This is the window");
     sheet_slide(sht_back, 0, 0);
     int mx = (binfo->scrnx - 16) / 2;
@@ -80,29 +92,47 @@ void HariMain(void)
     putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
     int i;
-    int count = 0;
     for (;;)
     {
-        count++;
-
-        sprintf(s, "fifo : %d", fifo32_status(&fifo));
-        putfont8_asc_sht(sht_back, 0, 120, WHITE, COL8_008400, s, 10);
 
         io_cli();
 
         if (fifo32_status(&fifo) == 0)
         {
-            io_sti();
+            io_stihlt();
         }
         else
         {
             i = fifo32_get(&fifo);
             io_sti();
+            /* キーボードデータ */
             if (256 <= i && i < 512)
             {
                 sprintf(s, "keycode %x", i - 256);
                 putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
+
+                if (i < 256 + 0x54)
+                {
+                    /*　1文字表示してからカーソルを1つすすめる */
+                    if (keytable[i - 256] != 0 && cursor_x < 144)
+                    {
+                        s[0] = keytable[i - 256];
+                        s[1] = 0;
+                        putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, s, 1);
+                        cursor_x += 8;
+                    }
+                }
+                /*バックスペース*/
+                if (i == 256 + 0x0e && cursor_x > 8)
+                {
+                    putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, " ", 1);
+                    cursor_x -= 8;
+                }
+                /*カーソルの再表示*/
+                boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
             }
+            /* マウスデータ */
             else if (512 <= i && i < 768)
             {
                 if (mouse_decode(&mdec, i - 512) != 0)
@@ -143,32 +173,36 @@ void HariMain(void)
                     sprintf(s, "mouse (%d, %d)", mx, my);
                     putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 17);
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
+
+                    if ((mdec.btn & 0x01) != 0)
+                    {
+                        sheet_slide(sht_window, mx - 80, my - 8);
+                    }
                 }
             }
             else if (i == 10)
             {
                 putfont8_asc_sht(sht_back, 0, 80, WHITE, COL8_008400, "10 sec", 7);
-                sprintf(s, "%d", count);
-                putfont8_asc_sht(sht_window, 40, 28, BLACK, COL8_C6C6C6, s, 10);
             }
             else if (i == 3)
             {
                 putfont8_asc_sht(sht_back, 0, 64, WHITE, COL8_008400, "3 sec", 6);
-                count = 0;
             }
             else if (i == 1)
             {
                 timer_init(timer3, &fifo, 0);
-                boxfill8(buf_back, binfo->scrnx, WHITE, 8, 96, 15, 111);
+                cursor_c = BLACK;
                 timer_settime(timer3, 50);
-                sheet_refresh(sht_back, 8, 96, 16, 112);
+                boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
             }
             else if (i == 0)
             {
                 timer_init(timer3, &fifo, 1);
-                boxfill8(buf_back, binfo->scrnx, COL8_008400, 8, 96, 15, 111);
+                cursor_c = WHITE;
                 timer_settime(timer3, 50);
-                sheet_refresh(sht_back, 8, 96, 16, 112);
+                boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
             }
         }
     }
@@ -236,5 +270,20 @@ void putfont8_asc_sht(struct SHEET *sht, int x, int y,
     putfont8_asc(sht->buf, sht->bxsize, x, y, c, s);
     sheet_refresh(sht, x, y, x + l * 8, y + 16);
 
+    return;
+}
+
+void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
+{
+    int x1 = x0 + sx, y1 = y0 + sy;
+    boxfill8(sht->buf, sht->bxsize, COL8_848484, x0 - 2, y0 - 3, x1 + 1, y0 - 3);
+    boxfill8(sht->buf, sht->bxsize, COL8_848484, x0 - 3, y0 - 3, x0 - 3, y1 + 1);
+    boxfill8(sht->buf, sht->bxsize, WHITE, x0 - 3, y1 + 2, x1 + 1, y1 + 2);
+    boxfill8(sht->buf, sht->bxsize, WHITE, x1 + 2, y0 - 3, x1 + 2, y1 + 2);
+    boxfill8(sht->buf, sht->bxsize, BLACK, x0 - 1, y0 - 2, x1 + 0, y0 - 2);
+    boxfill8(sht->buf, sht->bxsize, BLACK, x0 - 2, y0 - 2, x0 - 2, y1 + 0);
+    boxfill8(sht->buf, sht->bxsize, COL8_C6C6C6, x0 - 2, y1 + 1, x1 + 0, y1 + 1);
+    boxfill8(sht->buf, sht->bxsize, COL8_C6C6C6, x1 + 1, y0 - 2, x1 + 1, y1 + 1);
+    boxfill8(sht->buf, sht->bxsize, c, x0 - 1, y0 - 1, x1 + 0, y1 + 0);
     return;
 }

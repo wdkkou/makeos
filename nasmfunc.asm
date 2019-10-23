@@ -10,7 +10,7 @@
     GLOBAL  load_tr
     GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20
     GLOBAL  memtest_sub
-    GLOBAL  taskswitch4
+    GLOBAL  taskswitch3,taskswitch4
     EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20
 
 bits 32
@@ -199,6 +199,10 @@ mts_fin:
         pop ebx
         pop esi
         pop edi
+        ret
+
+taskswitch3:
+        jmp 3*8:0
         ret
 
 taskswitch4:

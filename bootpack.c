@@ -133,6 +133,7 @@ void HariMain(void)
     tss_b.fs = 1 * 8;
     tss_b.gs = 1 * 8;
     *((int *)(task_b_esp + 4)) = (int)sht_back;
+    mt_init();
 
     int i;
     for (;;)
@@ -148,13 +149,8 @@ void HariMain(void)
         {
             i = fifo32_get(&fifo);
             io_sti();
-            if (i == 2)
-            {
-                farjmp(0, 4 * 8);
-                timer_settime(timer_ts, 2);
-            }
             /* キーボードデータ */
-            else if (256 <= i && i < 512)
+            if (256 <= i && i < 512)
             {
                 sprintf(s, "keycode %x", i - 256);
                 putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
@@ -343,9 +339,6 @@ void task_b_main(struct SHEET *sht_back)
     fifo32_init(&fifo, 128, fifobuf);
 
     struct TIMER *timer_ts, *timer_put, *timer_1s;
-    timer_ts = timer_alloc();
-    timer_init(timer_ts, &fifo, 2);
-    timer_settime(timer_ts, 2);
 
     timer_put = timer_alloc();
     timer_init(timer_put, &fifo, 1);
@@ -357,7 +350,8 @@ void task_b_main(struct SHEET *sht_back)
 
     char s[10];
     int count = 0, count0 = 0;
-    while (1)
+    int res = 0;
+    for (;;)
     {
         count++;
         io_cli();
@@ -372,20 +366,15 @@ void task_b_main(struct SHEET *sht_back)
             if (i == 1)
             {
                 sprintf(s, "cnt : %d", count);
-                putfont8_asc_sht(sht_back, 0, 144, WHITE, COL8_008400, s, 10);
+                putfont8_asc_sht(sht_back, 0, 144, WHITE, COL8_008400, s, 20);
                 timer_settime(timer_put, 1);
-            }
-            else if (i == 2)
-            {
-                farjmp(0, 3 * 8);
-                timer_settime(timer_ts, 2);
             }
             else if (i == 100)
             {
-                sprintf(s, "cnt : %d", count0);
-                putfont8_asc_sht(sht_back, 0, 128, WHITE, COL8_008400, s, 10);
+                sprintf(s, "time : %d", count - count0);
+                putfont8_asc_sht(sht_back, 0, 128, WHITE, COL8_008400, s, 20);
                 count0 = count;
-                // timer_settime(timer_1s, 100);
+                timer_settime(timer_1s, 100);
             }
         }
     }

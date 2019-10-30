@@ -4,6 +4,71 @@
 struct TASKCTL *taskctl;
 struct TIMER *task_timer;
 
+struct TASK *task_now(void)
+{
+    struct TASKLEVEL *tl = &taskctl->level[taskctl->now_lv];
+    return tl->tasks[tl->now];
+}
+
+void task_add(struct TASK *task)
+{
+    struct TASKLEVEL *tl = &taskctl->level[task->level];
+    tl->tasks[tl->running] = task;
+    tl->running++;
+    task->flags = 2;
+    return;
+}
+
+void task_remove(struct TASK *task)
+{
+    struct TASKLEVEL *tl = &taskctl->level[task->level];
+
+    int pos = 0;
+    for (int i = 0; i < tl->running; i++)
+    {
+        if (tl->tasks[i] == task)
+        {
+            pos = i;
+            break;
+        }
+    }
+
+    tl->running--;
+    if (pos < tl->now)
+    {
+        tl->now--;
+    }
+    if (tl->now >= tl->running)
+    {
+        tl->now = 0;
+    }
+    task->flags = 1; /* スリープ中 */
+
+    for (; pos < tl->running; pos++)
+    {
+        tl->tasks[pos] = tl->tasks[pos + 1];
+    }
+
+    return;
+}
+
+void task_switchsub(void)
+{
+    int pos = 0;
+    for (int i = 0; i < MAX_TASKLEVEL; i++)
+    {
+        if (taskctl->level[i].running > 0)
+        {
+            pos = i;
+            break;
+        }
+    }
+    taskctl->now_lv = pos;
+    taskctl->lv_change = 0;
+
+    return;
+}
+
 struct TASK *task_init(struct MEMMAN *memman)
 {
     struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
@@ -15,12 +80,17 @@ struct TASK *task_init(struct MEMMAN *memman)
         set_segmdesc(gdt + TASK_GDT0 + i, 103, (int)&taskctl->tasks0[i].tss, AR_TSS32);
     }
 
+    for (int i = 0; i < MAX_TASKLEVEL; i++)
+    {
+        taskctl->level[i].running = 0;
+        taskctl->level[i].now = 0;
+    }
+
     struct TASK *task = task_alloc();
     task->flags = 2;    /* 動作中*/
     task->priority = 2; /* 0.02sec*/
-    taskctl->running = 1;
-    taskctl->now = 0;
-    taskctl->tasks[0] = task;
+    task_add(task);
+    task_switchsub(); /* レベル設定 */
     load_tr(task->sel);
     task_timer = timer_alloc();
     timer_settime(task_timer, 2);
@@ -56,35 +126,56 @@ struct TASK *task_alloc(void)
     return 0;
 }
 
-void task_run(struct TASK *task, int priority)
+void task_run(struct TASK *task, int level, int priority)
 {
+    if (level < 0)
+    {
+        /* レベルの変更をしない */
+        level = task->level;
+    }
     if (priority > 0)
     {
         task->priority = priority;
     }
+
+    /* 動作中のレベルの変更 */
+    if (task->flags == 2 && task->level != level)
+    {
+        task_remove(task);
+    }
+
     if (task->flags != 2)
     {
-        task->flags = 2; /* 動作中 */
-        taskctl->tasks[taskctl->running] = task;
-        taskctl->running++;
+        /* スリープから起こされる場合 */
+        task->level = level;
+        task_add(task);
     }
+
+    taskctl->lv_change = 1; /* 次回タスクスイッチの時にレベルを見直す */
     return;
 }
 
 void task_switch(void)
 {
-    taskctl->now++;
-    if (taskctl->now == taskctl->running)
+    struct TASKLEVEL *tl = &taskctl->level[taskctl->now_lv];
+    struct TASK *now_task = tl->tasks[tl->now];
+    tl->now++;
+    if (tl->now == tl->running)
     {
-        taskctl->now = 0;
+        tl->now = 0;
     }
-    struct TASK *task = taskctl->tasks[taskctl->now];
-    timer_settime(task_timer, task->priority);
 
-    /* 動作中のタスクが2以上の時だけタスクスイッチ */
-    if (taskctl->running >= 2)
+    if (taskctl->lv_change != 0)
     {
-        farjmp(0, task->sel);
+        task_switchsub();
+        tl = &taskctl->level[taskctl->now_lv];
+    }
+    struct TASK *new_task = tl->tasks[tl->now];
+    timer_settime(task_timer, new_task->priority);
+
+    if (new_task != now_task)
+    {
+        farjmp(0, new_task->sel);
     }
 
     return;
@@ -94,41 +185,14 @@ void task_sleep(struct TASK *task)
 {
     if (task->flags == 2)
     {
-        char ts = 0;
-        if (task == taskctl->tasks[taskctl->now])
+        struct TASK *now_task = task_now();
+        task_remove(task);
+        if (task == now_task)
         {
-            /*自分自身をsleepする際には, 後でタスクスウィッチ */
-            ts = 1;
-        }
-        /* taskがどこにあるのかを探す */
-        int pos = 0;
-        for (int i = 0; i < taskctl->running; i++)
-        {
-            if (taskctl->tasks[i] == task)
-            {
-                pos = i;
-                break;
-            }
-        }
-        taskctl->running--;
-        if (pos < taskctl->now)
-        {
-            taskctl->now--;
-        }
-        for (; pos < taskctl->running; pos++)
-        {
-            taskctl->tasks[pos] = taskctl->tasks[pos + 1];
-        }
-        task->flags = 1; /* 動作していない状態 */
-
-        if (ts != 0)
-        {
-            /*タスクスイッチ*/
-            if (taskctl->now >= taskctl->running)
-            {
-                taskctl->now = 0;
-            }
-            farjmp(0, taskctl->tasks[taskctl->now]->sel);
+            /*自分自身をsleepなので，タスクスイッチが必要 */
+            task_switchsub();
+            now_task = task_now();
+            farjmp(0, now_task->sel);
         }
     }
     return;

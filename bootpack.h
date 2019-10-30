@@ -215,6 +215,9 @@ void inthandler20(int *esp);
 /* mtask.c */
 #define MAX_TASKS 1000
 #define TASK_GDT0 3
+#define MAX_TASKS_LV 100
+#define MAX_TASKLEVEL 10
+
 struct TSS32
 {
     int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
@@ -225,20 +228,26 @@ struct TSS32
 struct TASK
 {
     int sel, flags; /* selはGDTの番号のこと */
-    int priority;
+    int level, priority;
     struct TSS32 tss;
 };
-struct TASKCTL
+struct TASKLEVEL
 {
     int running; /* 動作しているタスクの数 */
     int now;     /* 現在動作しているタスクがどれだか分かるようにするための変数 */
-    struct TASK *tasks[MAX_TASKS];
+    struct TASK *tasks[MAX_TASKS_LV]
+};
+struct TASKCTL
+{
+    int now_lv;     /* 動作中のレベル */
+    char lv_change; /* 次回のタスクスイッチの時にレベルを変えたほうがいいかどうか */
+    struct TASKLEVEL level[MAX_TASKLEVEL];
     struct TASK tasks0[MAX_TASKS];
 };
 
 extern struct TIMER *task_timer;
 struct TASK *task_init(struct MEMMAN *memman);
 struct TASK *task_alloc(void);
-void task_run(struct TASK *task, int priority);
+void task_run(struct TASK *task, int level, int priority);
 void task_switch(void);
 void task_sleep(struct TASK *task);

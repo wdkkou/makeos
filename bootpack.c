@@ -1,18 +1,10 @@
 #include "bootpack.h"
 
-void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void putfont8_asc_sht(struct SHEET *sht, int x, int y,
                       int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0,
                    int sx, int sy, int c);
-
-struct TSS32
-{
-    int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
-    int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
-    int es, cs, ss, ds, fs, gs;
-    int ldtr, iomap;
-};
 
 void task_b_main(struct SHEET *sht_back);
 
@@ -34,7 +26,7 @@ void HariMain(void)
 
     struct FIFO32 fifo;
     int fifobuf[128];
-    fifo32_init(&fifo, 128, fifobuf);
+    fifo32_init(&fifo, 128, fifobuf, 0);
 
     init_pit();
 
@@ -45,23 +37,14 @@ void HariMain(void)
     io_out8(PIC0_IMR, 0xf8); /* PITとPIC1とキーボードを許可 */
     io_out8(PIC1_IMR, 0xef); /* マウスを許可 */
 
-    struct TIMER *timer1, *timer2, *timer3, *timer_ts;
+    struct TIMER *timer;
 
-    timer1 = timer_alloc();
-    timer_init(timer1, &fifo, 10);
-    timer_settime(timer1, 1000);
-
-    timer2 = timer_alloc();
-    timer_init(timer2, &fifo, 3);
-    timer_settime(timer2, 300);
-
-    timer3 = timer_alloc();
-    timer_init(timer3, &fifo, 1);
-    timer_settime(timer3, 50);
-
-    timer_ts = timer_alloc();
-    timer_init(timer_ts, &fifo, 2);
-    timer_settime(timer_ts, 2);
+    /*カーソル点滅*/
+    int cursor_x = 8;
+    int cursor_c = WHITE;
+    timer = timer_alloc();
+    timer_init(timer, &fifo, 1);
+    timer_settime(timer, 50);
 
     struct MEMMAM *memman = (struct MEMMAN *)MEM_ADDR;
     unsigned int memtotal = memtest(0x00400000, 0xbfffffff);
@@ -70,35 +53,68 @@ void HariMain(void)
     memman_free_4k(memman, 0x00400000, memtotal - 0x00400000);
 
     init_palette();
-
     struct SHTCTL *shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
+    struct TASK *task_a = task_init(memman);
+    fifo.task = task_a;
+    task_run(task_a, 1, 0);
+
+    /* sht_back */
     struct SHEET *sht_back = sheet_alloc(shtctl);
-    struct SHEET *sht_mouse = sheet_alloc(shtctl);
-    struct SHEET *sht_window = sheet_alloc(shtctl);
-
     unsigned char *buf_back = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
-    unsigned char *buf_win = (unsigned char *)memman_alloc_4k(memman, 160 * 52);
-
     sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
+    init_screen(buf_back, binfo->scrnx, binfo->scrny);
+
+    /* sht_window */
+    struct SHEET *sht_window = sheet_alloc(shtctl);
+    unsigned char *buf_win = (unsigned char *)memman_alloc_4k(memman, 160 * 52);
+    sheet_setbuf(sht_window, buf_win, 160, 52, -1);
+    make_window8(buf_win, 160, 52, "task_a", 1);
+    make_textbox8(sht_window, 8, 28, 144, 16, WHITE);
+
+    /* sht_win_b */
+    struct SHEET *sht_win_b[3];
+    unsigned char *buf_win_b;
+    struct TASK *task_b[3];
+    for (int i = 0; i < 3; i++)
+    {
+        sht_win_b[i] = sheet_alloc(shtctl);
+        buf_win_b = (unsigned char *)memman_alloc_4k(memman, 144 * 52);
+        sheet_setbuf(sht_win_b[i], buf_win_b, 144, 52, -1); /* 透明色なし */
+        sprintf(s, "task_b%d", i);
+        make_window8(buf_win_b, 144, 52, s, 0);
+        task_b[i] = task_alloc();
+        task_b[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
+        task_b[i]->tss.eip = (int)&task_b_main;
+        task_b[i]->tss.es = 1 * 8;
+        task_b[i]->tss.cs = 2 * 8;
+        task_b[i]->tss.ss = 1 * 8;
+        task_b[i]->tss.ds = 1 * 8;
+        task_b[i]->tss.fs = 1 * 8;
+        task_b[i]->tss.gs = 1 * 8;
+        *((int *)(task_b[i]->tss.esp + 4)) = (int)sht_win_b[i];
+        task_run(task_b[i], 2, i + 1);
+    }
+
+    /* sht_mouse */
+    struct SHEET *sht_mouse = sheet_alloc(shtctl);
     unsigned char buf_mouse[256];
     sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
-    sheet_setbuf(sht_window, buf_win, 160, 52, -1);
-
-    init_screen(buf_back, binfo->scrnx, binfo->scrny);
     init_mouse_cursor8(buf_mouse, 99);
-    make_window8(buf_win, 160, 52, "window");
-    make_textbox8(sht_window, 8, 28, 144, 16, WHITE);
-    int cursor_x = 8;
-    int cursor_c = WHITE;
-    // putfont8_asc(buf_win, 160, 8, 32, BLACK, "This is the window");
-    sheet_slide(sht_back, 0, 0);
     int mx = (binfo->scrnx - 16) / 2;
     int my = (binfo->scrny - 28 - 16) / 2;
+
+    sheet_slide(sht_back, 0, 0);
+    sheet_slide(sht_win_b[0], 168, 56);
+    sheet_slide(sht_win_b[1], 8, 116);
+    sheet_slide(sht_win_b[2], 168, 116);
+    sheet_slide(sht_window, 8, 56);
     sheet_slide(sht_mouse, mx, my);
-    sheet_slide(sht_window, 80, 90);
     sheet_updown(sht_back, 0);
-    sheet_updown(sht_mouse, 2);
-    sheet_updown(sht_window, 1);
+    sheet_updown(sht_win_b[0], 1);
+    sheet_updown(sht_win_b[1], 2);
+    sheet_updown(sht_win_b[2], 3);
+    sheet_updown(sht_window, 4);
+    sheet_updown(sht_mouse, 5);
 
     sprintf(s, "mouse (%d, %d)", mx, my);
     putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 15);
@@ -106,43 +122,13 @@ void HariMain(void)
     sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
     putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
-    struct TSS32 tss_a, tss_b;
-    struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
-    tss_a.ldtr = 0;
-    tss_a.iomap = 0x40000000;
-    tss_b.ldtr = 0;
-    tss_b.iomap = 0x40000000;
-    set_segmdesc(gdt + 3, 103, (int)&tss_a, AR_TSS32);
-    set_segmdesc(gdt + 4, 103, (int)&tss_b, AR_TSS32);
-    load_tr(3 * 8);
-    int task_b_esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
-    tss_b.eip = (int)&task_b_main;
-    tss_b.eflags = 0x00000202; /* IF = 1; */
-    tss_b.eax = 0;
-    tss_b.ecx = 0;
-    tss_b.edx = 0;
-    tss_b.ebx = 0;
-    tss_b.esp = task_b_esp;
-    tss_b.ebp = 0;
-    tss_b.esi = 0;
-    tss_b.edi = 0;
-    tss_b.es = 1 * 8;
-    tss_b.cs = 2 * 8;
-    tss_b.ss = 1 * 8;
-    tss_b.ds = 1 * 8;
-    tss_b.fs = 1 * 8;
-    tss_b.gs = 1 * 8;
-    *((int *)(task_b_esp + 4)) = (int)sht_back;
-    mt_init();
-
     int i;
     for (;;)
     {
-
         io_cli();
-
         if (fifo32_status(&fifo) == 0)
         {
+            task_sleep(task_a);
             io_stihlt();
         }
         else
@@ -234,24 +220,24 @@ void HariMain(void)
             }
             else if (i == 1)
             {
-                timer_init(timer3, &fifo, 0);
+                timer_init(timer, &fifo, 0);
                 cursor_c = BLACK;
-                timer_settime(timer3, 50);
+                timer_settime(timer, 50);
                 boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
                 sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
             }
             else if (i == 0)
             {
-                timer_init(timer3, &fifo, 1);
+                timer_init(timer, &fifo, 1);
                 cursor_c = WHITE;
-                timer_settime(timer3, 50);
+                timer_settime(timer, 50);
                 boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
                 sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
             }
         }
     }
 }
-void make_window8(unsigned char *buf, int xsize, int ysize, char *title)
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act)
 {
     static char closebtn[14][16] = {
         "OOOOOOOOOOOOOOO@",
@@ -268,6 +254,18 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title)
         "OQQQQQQQQQQQQQ$@",
         "O$$$$$$$$$$$$$$@",
         "@@@@@@@@@@@@@@@@"};
+
+    char tc, tbc;
+    if (act != 0)
+    {
+        tc = WHITE;
+        tbc = COL8_000084;
+    }
+    else
+    {
+        tc = COL8_C6C6C6;
+        tbc = COL8_848484;
+    }
     boxfill8(buf, xsize, COL8_C6C6C6, 0, 0, xsize - 1, 0);
     boxfill8(buf, xsize, WHITE, 1, 1, xsize - 2, 1);
     boxfill8(buf, xsize, COL8_C6C6C6, 0, 0, 0, ysize - 1);
@@ -275,10 +273,10 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title)
     boxfill8(buf, xsize, COL8_848484, xsize - 2, 1, xsize - 2, ysize - 2);
     boxfill8(buf, xsize, WHITE, xsize - 1, 0, xsize - 1, ysize - 1);
     boxfill8(buf, xsize, COL8_C6C6C6, 2, 2, xsize - 3, ysize - 3);
-    boxfill8(buf, xsize, COL8_000084, 3, 3, xsize - 4, 20);
+    boxfill8(buf, xsize, tbc, 3, 3, xsize - 4, 20);
     boxfill8(buf, xsize, COL8_848484, 1, ysize - 2, xsize - 2, ysize - 2);
     boxfill8(buf, xsize, WHITE, 0, ysize - 1, xsize - 1, ysize - 1);
-    putfont8_asc(buf, xsize, 24, 4, WHITE, title);
+    putfont8_asc(buf, xsize, 24, 4, tc, title);
 
     for (int y = 0; y < 14; y++)
     {
@@ -332,18 +330,13 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
     return;
 }
 
-void task_b_main(struct SHEET *sht_back)
+void task_b_main(struct SHEET *sht_win_b)
 {
     struct FIFO32 fifo;
     int fifobuf[128];
-    fifo32_init(&fifo, 128, fifobuf);
+    fifo32_init(&fifo, 128, fifobuf, 0);
 
-    struct TIMER *timer_ts, *timer_put, *timer_1s;
-
-    timer_put = timer_alloc();
-    timer_init(timer_put, &fifo, 1);
-    timer_settime(timer_put, 1);
-
+    struct TIMER *timer_1s;
     timer_1s = timer_alloc();
     timer_init(timer_1s, &fifo, 100);
     timer_settime(timer_1s, 100);
@@ -363,16 +356,10 @@ void task_b_main(struct SHEET *sht_back)
         {
             int i = fifo32_get(&fifo);
             io_sti();
-            if (i == 1)
+            if (i == 100)
             {
-                sprintf(s, "cnt : %d", count);
-                putfont8_asc_sht(sht_back, 0, 144, WHITE, COL8_008400, s, 20);
-                timer_settime(timer_put, 1);
-            }
-            else if (i == 100)
-            {
-                sprintf(s, "time : %d", count - count0);
-                putfont8_asc_sht(sht_back, 0, 128, WHITE, COL8_008400, s, 20);
+                sprintf(s, "%d", count - count0);
+                putfont8_asc_sht(sht_win_b, 24, 28, BLACK, COL8_C6C6C6, s, 20);
                 count0 = count;
                 timer_settime(timer_1s, 100);
             }

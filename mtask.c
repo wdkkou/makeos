@@ -77,3 +77,47 @@ void task_switch(void)
     }
     return;
 }
+
+void task_sleep(struct TASK *task)
+{
+    if (task->flags == 2)
+    {
+        char ts = 0;
+        if (task == taskctl->tasks[taskctl->now])
+        {
+            /*自分自身をsleepする際には, 後でタスクスウィッチ */
+            ts = 1;
+        }
+        /* taskがどこにあるのかを探す */
+        int pos = 0;
+        for (int i = 0; i < taskctl->running; i++)
+        {
+            if (taskctl->tasks[i] == task)
+            {
+                pos = i;
+                break;
+            }
+        }
+        taskctl->running--;
+        if (pos < taskctl->now)
+        {
+            taskctl->now--;
+        }
+        for (; pos < taskctl->running; pos++)
+        {
+            taskctl->tasks[pos] = taskctl->tasks[pos + 1];
+        }
+        task->flags = 1; /* 動作していない状態 */
+
+        if (ts != 0)
+        {
+            /*タスクスイッチ*/
+            if (taskctl->now >= taskctl->running)
+            {
+                taskctl->now = 0;
+            }
+            farjmp(0, taskctl->tasks[taskctl->now]->sel);
+        }
+    }
+    return;
+}

@@ -113,6 +113,7 @@ void HariMain(void)
     putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
     int i;
+    int key_to = 0;
     for (;;)
     {
         io_cli();
@@ -147,6 +148,24 @@ void HariMain(void)
                 {
                     putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, " ", 1);
                     cursor_x -= 8;
+                }
+                /* tab */
+                if (i == 256 + 0x0f)
+                {
+                    if (key_to == 0)
+                    {
+                        key_to = 1;
+                        make_wtitle8(buf_win, sht_window->bxsize, "task_a", 0);
+                        make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
+                    }
+                    else
+                    {
+                        key_to = 0;
+                        make_wtitle8(buf_win, sht_window->bxsize, "task_a", 1);
+                        make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
+                    }
+                    sheet_refresh(sht_window, 0, 0, sht_window->bxsize, 21);
+                    sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
                 }
                 /*カーソルの再表示*/
                 boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);

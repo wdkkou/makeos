@@ -12,13 +12,25 @@ void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     char s[40];
-    static char keytable[0x54] = {
+
+    static char keytable0[0x80] = {
         0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0, 0,
         'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0, 0, 'A', 'S',
         'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0, 0, ']', 'Z', 'X', 'C', 'V',
         'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
-        '2', '3', '0', '.'};
+        '2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0x5c, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x5c, 0, 0};
+    static char keytable1[0x80] = {
+        0, 0, '!', 0x22, '#', '$', '%', '&', 0x27, '(', ')', '~', '=', '~', 0, 0,
+        'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '`', '{', 0, 0, 'A', 'S',
+        'D', 'F', 'G', 'H', 'J', 'K', 'L', '+', '*', 0, 0, '}', 'Z', 'X', 'C', 'V',
+        'B', 'N', 'M', '<', '>', '?', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
+        '2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, '_', 0, 0, 0, 0, 0, 0, 0, 0, 0, '|', 0, 0};
 
     init_gdtidt();
     init_pic();
@@ -113,7 +125,7 @@ void HariMain(void)
     putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
     int i;
-    int key_to = 0;
+    int key_to = 0, key_shift = 0;
     for (;;)
     {
         io_cli();
@@ -132,14 +144,28 @@ void HariMain(void)
                 sprintf(s, "keycode %x", i - 256);
                 putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
 
-                if (i < 0x54 + 256 && keytable[i - 256] != 0)
+                if (i < 0x80 + 256) /* キーコードを文字コードに変換 */
+                {
+                    if (key_shift == 0)
+                    {
+                        s[0] = keytable0[i - 256];
+                    }
+                    else
+                    {
+                        s[0] = keytable1[i - 256];
+                    }
+                }
+                else
+                {
+                    s[0] = 0;
+                }
+                if (s[0] != 0)
                 {
                     if (key_to == 0) /* タスクA */
                     {
                         /*　1文字表示してからカーソルを1つすすめる */
                         if (cursor_x < 128)
                         {
-                            s[0] = keytable[i - 256];
                             s[1] = 0;
                             putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, s, 1);
                             cursor_x += 8;
@@ -147,7 +173,7 @@ void HariMain(void)
                     }
                     else
                     {
-                        fifo32_put(&task_cons->fifo, keytable[i - 256] + 256);
+                        fifo32_put(&task_cons->fifo, s[0] + 256);
                     }
                 }
                 /*バックスペース*/
@@ -184,6 +210,22 @@ void HariMain(void)
                     }
                     sheet_refresh(sht_window, 0, 0, sht_window->bxsize, 21);
                     sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
+                }
+                if (i == 256 + 0x2a)
+                {
+                    key_shift |= 1;
+                }
+                if (i == 256 + 0x36)
+                {
+                    key_shift |= 2;
+                }
+                if (i == 256 + 0xaa)
+                {
+                    key_shift &= ~1;
+                }
+                if (i == 256 + 0xb6)
+                {
+                    key_shift &= ~2;
                 }
                 /*カーソルの再表示*/
                 boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);

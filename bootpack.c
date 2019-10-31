@@ -126,6 +126,7 @@ void HariMain(void)
 
     int i;
     int key_to = 0, key_shift = 0;
+    int key_leds = (binfo->leds >> 4) & 7;
     for (;;)
     {
         io_cli();
@@ -158,6 +159,14 @@ void HariMain(void)
                 else
                 {
                     s[0] = 0;
+                }
+                if ('A' <= s[0] && s[0] <= 'Z')
+                {
+                    if (((key_leds & 4) == 0 && key_shift == 0) ||
+                        ((key_leds & 4) != 0 && key_shift != 0))
+                    {
+                        s[0] += 0x20; /* 大文字を小文字に変換 */
+                    }
                 }
                 if (s[0] != 0)
                 {

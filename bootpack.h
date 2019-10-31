@@ -229,6 +229,7 @@ struct TASK
 {
     int sel, flags; /* selはGDTの番号のこと */
     int level, priority;
+    struct FIFO32 fifo;
     struct TSS32 tss;
 };
 struct TASKLEVEL
@@ -246,6 +247,7 @@ struct TASKCTL
 };
 
 extern struct TIMER *task_timer;
+struct TASK *task_now(void);
 struct TASK *task_init(struct MEMMAN *memman);
 struct TASK *task_alloc(void);
 void task_run(struct TASK *task, int level, int priority);

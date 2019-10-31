@@ -5,20 +5,33 @@ void putfont8_asc_sht(struct SHEET *sht, int x, int y,
                       int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0,
                    int sx, int sy, int c);
+void console_task(struct SHEET *sheet);
 
-void task_b_main(struct SHEET *sht_back);
+#define KEYCMD_LED 0xed
 
 void HariMain(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     char s[40];
-    static char keytable[0x54] = {
+
+    static char keytable0[0x80] = {
         0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0, 0,
         'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0, 0, 'A', 'S',
         'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0, 0, ']', 'Z', 'X', 'C', 'V',
         'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
-        '2', '3', '0', '.'};
+        '2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0x5c, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x5c, 0, 0};
+    static char keytable1[0x80] = {
+        0, 0, '!', 0x22, '#', '$', '%', '&', 0x27, '(', ')', '~', '=', '~', 0, 0,
+        'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '`', '{', 0, 0, 'A', 'S',
+        'D', 'F', 'G', 'H', 'J', 'K', 'L', '+', '*', 0, 0, '}', 'Z', 'X', 'C', 'V',
+        'B', 'N', 'M', '<', '>', '?', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
+        '2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, '_', 0, 0, 0, 0, 0, 0, 0, 0, 0, '|', 0, 0};
 
     init_gdtidt();
     init_pic();
@@ -71,29 +84,23 @@ void HariMain(void)
     make_window8(buf_win, 160, 52, "task_a", 1);
     make_textbox8(sht_window, 8, 28, 144, 16, WHITE);
 
-    /* sht_win_b */
-    struct SHEET *sht_win_b[3];
-    unsigned char *buf_win_b;
-    struct TASK *task_b[3];
-    for (int i = 0; i < 3; i++)
-    {
-        sht_win_b[i] = sheet_alloc(shtctl);
-        buf_win_b = (unsigned char *)memman_alloc_4k(memman, 144 * 52);
-        sheet_setbuf(sht_win_b[i], buf_win_b, 144, 52, -1); /* 透明色なし */
-        sprintf(s, "task_b%d", i);
-        make_window8(buf_win_b, 144, 52, s, 0);
-        task_b[i] = task_alloc();
-        task_b[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
-        task_b[i]->tss.eip = (int)&task_b_main;
-        task_b[i]->tss.es = 1 * 8;
-        task_b[i]->tss.cs = 2 * 8;
-        task_b[i]->tss.ss = 1 * 8;
-        task_b[i]->tss.ds = 1 * 8;
-        task_b[i]->tss.fs = 1 * 8;
-        task_b[i]->tss.gs = 1 * 8;
-        *((int *)(task_b[i]->tss.esp + 4)) = (int)sht_win_b[i];
-        task_run(task_b[i], 2, i + 1);
-    }
+    /* sht_cons */
+    struct SHEET *sht_cons = sheet_alloc(shtctl);
+    unsigned *buf_cons = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
+    sheet_setbuf(sht_cons, buf_cons, 256, 165, -1);
+    make_window8(buf_cons, 256, 165, "console", 0);
+    make_textbox8(sht_cons, 8, 28, 240, 128, BLACK);
+    struct TASK *task_cons = task_alloc();
+    task_cons->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
+    task_cons->tss.eip = (int)&console_task;
+    task_cons->tss.es = 1 * 8;
+    task_cons->tss.cs = 2 * 8;
+    task_cons->tss.ss = 1 * 8;
+    task_cons->tss.ds = 1 * 8;
+    task_cons->tss.fs = 1 * 8;
+    task_cons->tss.gs = 1 * 8;
+    *((int *)(task_cons->tss.esp + 4)) = (int)sht_cons;
+    task_run(task_cons, 2, 2); /*level=2 ,priority=2*/
 
     /* sht_mouse */
     struct SHEET *sht_mouse = sheet_alloc(shtctl);
@@ -104,17 +111,13 @@ void HariMain(void)
     int my = (binfo->scrny - 28 - 16) / 2;
 
     sheet_slide(sht_back, 0, 0);
-    sheet_slide(sht_win_b[0], 168, 56);
-    sheet_slide(sht_win_b[1], 8, 116);
-    sheet_slide(sht_win_b[2], 168, 116);
-    sheet_slide(sht_window, 8, 56);
+    sheet_slide(sht_cons, 32, 4);
+    sheet_slide(sht_window, 64, 56);
     sheet_slide(sht_mouse, mx, my);
     sheet_updown(sht_back, 0);
-    sheet_updown(sht_win_b[0], 1);
-    sheet_updown(sht_win_b[1], 2);
-    sheet_updown(sht_win_b[2], 3);
-    sheet_updown(sht_window, 4);
-    sheet_updown(sht_mouse, 5);
+    sheet_updown(sht_cons, 1);
+    sheet_updown(sht_window, 2);
+    sheet_updown(sht_mouse, 3);
 
     sprintf(s, "mouse (%d, %d)", mx, my);
     putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 15);
@@ -123,13 +126,29 @@ void HariMain(void)
     putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
     int i;
+    int key_to = 0, key_shift = 0;
+    int key_leds = (binfo->leds >> 4) & 7;
+    int keycmd_wait = -1;
+
+    /* 最初にキーボード状態との食い違いがないように、設定しておくことにする */
+    struct FIFO32 keycmd;
+    fifo32_put(&keycmd, KEYCMD_LED);
+    fifo32_put(&keycmd, key_leds);
+
     for (;;)
     {
+        if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0)
+        {
+            /* キーボードコントローラに送るデータがあれば、送る */
+            keycmd_wait = fifo32_get(&keycmd);
+            wait_KBC_sendready();
+            io_out8(PORT_KEYDAT, keycmd_wait);
+        }
         io_cli();
         if (fifo32_status(&fifo) == 0)
         {
             task_sleep(task_a);
-            io_stihlt();
+            io_sti();
         }
         else
         {
@@ -141,22 +160,123 @@ void HariMain(void)
                 sprintf(s, "keycode %x", i - 256);
                 putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
 
-                if (i < 256 + 0x54)
+                if (i < 0x80 + 256) /* キーコードを文字コードに変換 */
                 {
-                    /*　1文字表示してからカーソルを1つすすめる */
-                    if (keytable[i - 256] != 0 && cursor_x < 144)
+                    if (key_shift == 0)
                     {
-                        s[0] = keytable[i - 256];
-                        s[1] = 0;
-                        putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, s, 1);
-                        cursor_x += 8;
+                        s[0] = keytable0[i - 256];
+                    }
+                    else
+                    {
+                        s[0] = keytable1[i - 256];
+                    }
+                }
+                else
+                {
+                    s[0] = 0;
+                }
+                if ('A' <= s[0] && s[0] <= 'Z')
+                {
+                    if (((key_leds & 4) == 0 && key_shift == 0) ||
+                        ((key_leds & 4) != 0 && key_shift != 0))
+                    {
+                        s[0] += 0x20; /* 大文字を小文字に変換 */
+                    }
+                }
+                if (s[0] != 0)
+                {
+                    if (key_to == 0) /* タスクA */
+                    {
+                        /*　1文字表示してからカーソルを1つすすめる */
+                        if (cursor_x < 128)
+                        {
+                            s[1] = 0;
+                            putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, s, 1);
+                            cursor_x += 8;
+                        }
+                    }
+                    else
+                    {
+                        fifo32_put(&task_cons->fifo, s[0] + 256);
                     }
                 }
                 /*バックスペース*/
-                if (i == 256 + 0x0e && cursor_x > 8)
+                if (i == 256 + 0x0e) /* バックスペース */
                 {
-                    putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, " ", 1);
-                    cursor_x -= 8;
+                    if (key_to == 0)
+                    {
+                        if (cursor_x > 8)
+                        {
+                            /* カーソルをスペースで消して，カーソル位置を1つ戻す */
+                            putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, " ", 1);
+                            cursor_x -= 8;
+                        }
+                    }
+                    else
+                    {
+                        fifo32_put(&task_cons->fifo, 8 + 256);
+                    }
+                }
+                /* tab */
+                if (i == 256 + 0x0f)
+                {
+                    if (key_to == 0)
+                    {
+                        key_to = 1;
+                        make_wtitle8(buf_win, sht_window->bxsize, "task_a", 0);
+                        make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
+                    }
+                    else
+                    {
+                        key_to = 0;
+                        make_wtitle8(buf_win, sht_window->bxsize, "task_a", 1);
+                        make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
+                    }
+                    sheet_refresh(sht_window, 0, 0, sht_window->bxsize, 21);
+                    sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
+                }
+                if (i == 256 + 0x2a)
+                { /* 左シフト　on */
+                    key_shift |= 1;
+                }
+                if (i == 256 + 0x36)
+                { /* 右シフト　on */
+                    key_shift |= 2;
+                }
+                if (i == 256 + 0xaa)
+                { /* 左シフト　off */
+                    key_shift &= ~1;
+                }
+                if (i == 256 + 0xb6)
+                { /* 右シフト　off */
+                    key_shift &= ~2;
+                }
+                if (i == 256 + 0x3a)
+                { /* CapsLock */
+                    key_leds ^= 4;
+                    fifo32_put(&keycmd, KEYCMD_LED);
+                    fifo32_put(&keycmd, key_leds);
+                }
+                if (i == 256 + 0x45)
+                { /* NumLock */
+                    key_leds ^= 2;
+                    fifo32_put(&keycmd, KEYCMD_LED);
+                    fifo32_put(&keycmd, key_leds);
+                }
+                if (i == 256 + 0x46)
+                { /* ScrollLock */
+                    key_leds ^= 1;
+                    fifo32_put(&keycmd, KEYCMD_LED);
+                    fifo32_put(&keycmd, key_leds);
+                }
+                if (i == 256 + 0xfa)
+                { /* キーボードがデータを無事に受け取った */
+                    keycmd_wait = -1;
+                }
+                if (i == 256 + 0xfe)
+                { /* キーボードがデータを無事に受け取れなかった */
+                    wait_KBC_sendready();
+                    io_out8(PORT_KEYDAT, keycmd_wait);
                 }
                 /*カーソルの再表示*/
                 boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
@@ -239,6 +359,21 @@ void HariMain(void)
 }
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act)
 {
+    boxfill8(buf, xsize, COL8_C6C6C6, 0, 0, xsize - 1, 0);
+    boxfill8(buf, xsize, WHITE, 1, 1, xsize - 2, 1);
+    boxfill8(buf, xsize, COL8_C6C6C6, 0, 0, 0, ysize - 1);
+    boxfill8(buf, xsize, WHITE, 1, 1, 1, ysize - 2);
+    boxfill8(buf, xsize, COL8_848484, xsize - 2, 1, xsize - 2, ysize - 2);
+    boxfill8(buf, xsize, WHITE, xsize - 1, 0, xsize - 1, ysize - 1);
+    boxfill8(buf, xsize, COL8_C6C6C6, 2, 2, xsize - 3, ysize - 3);
+    boxfill8(buf, xsize, COL8_848484, 1, ysize - 2, xsize - 2, ysize - 2);
+    boxfill8(buf, xsize, WHITE, 0, ysize - 1, xsize - 1, ysize - 1);
+    make_wtitle8(buf, xsize, title, act);
+
+    return;
+}
+void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
+{
     static char closebtn[14][16] = {
         "OOOOOOOOOOOOOOO@",
         "OQQQQQQQQQQQQQ$@",
@@ -266,18 +401,8 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char ac
         tc = COL8_C6C6C6;
         tbc = COL8_848484;
     }
-    boxfill8(buf, xsize, COL8_C6C6C6, 0, 0, xsize - 1, 0);
-    boxfill8(buf, xsize, WHITE, 1, 1, xsize - 2, 1);
-    boxfill8(buf, xsize, COL8_C6C6C6, 0, 0, 0, ysize - 1);
-    boxfill8(buf, xsize, WHITE, 1, 1, 1, ysize - 2);
-    boxfill8(buf, xsize, COL8_848484, xsize - 2, 1, xsize - 2, ysize - 2);
-    boxfill8(buf, xsize, WHITE, xsize - 1, 0, xsize - 1, ysize - 1);
-    boxfill8(buf, xsize, COL8_C6C6C6, 2, 2, xsize - 3, ysize - 3);
     boxfill8(buf, xsize, tbc, 3, 3, xsize - 4, 20);
-    boxfill8(buf, xsize, COL8_848484, 1, ysize - 2, xsize - 2, ysize - 2);
-    boxfill8(buf, xsize, WHITE, 0, ysize - 1, xsize - 1, ysize - 1);
     putfont8_asc(buf, xsize, 24, 4, tc, title);
-
     for (int y = 0; y < 14; y++)
     {
         for (int x = 0; x < 16; x++)
@@ -302,6 +427,7 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char ac
             buf[(5 + y) * xsize + (xsize - 21 + x)] = c;
         }
     }
+
     return;
 }
 
@@ -330,39 +456,77 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
     return;
 }
 
-void task_b_main(struct SHEET *sht_win_b)
+void console_task(struct SHEET *sheet)
 {
     struct FIFO32 fifo;
     int fifobuf[128];
-    fifo32_init(&fifo, 128, fifobuf, 0);
+    struct TASK *task = task_now();
 
-    struct TIMER *timer_1s;
-    timer_1s = timer_alloc();
-    timer_init(timer_1s, &fifo, 100);
-    timer_settime(timer_1s, 100);
+    fifo32_init(&task->fifo, 128, fifobuf, task);
 
-    char s[10];
-    int count = 0, count0 = 0;
-    int res = 0;
-    for (;;)
+    struct TIMER *timer = timer_alloc();
+    timer_init(timer, &task->fifo, 1);
+    timer_settime(timer, 50);
+
+    /* プロンプト表示 */
+    putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, ">", 1);
+
+    char s[2];
+    int cursor_x = 16, cursor_c = BLACK;
+    while (1)
     {
-        count++;
         io_cli();
-        if (fifo32_status(&fifo) == 0)
+        if (fifo32_status(&task->fifo) == 0)
         {
+            task_sleep(task);
             io_sti();
         }
         else
         {
-            int i = fifo32_get(&fifo);
+            int data = fifo32_get(&task->fifo);
             io_sti();
-            if (i == 100)
+            if (data <= 1)
             {
-                sprintf(s, "%d", count - count0);
-                putfont8_asc_sht(sht_win_b, 24, 28, BLACK, COL8_C6C6C6, s, 20);
-                count0 = count;
-                timer_settime(timer_1s, 100);
+                if (data != 0)
+                {
+                    timer_init(timer, &task->fifo, 0);
+                    cursor_c = WHITE;
+                }
+                else
+                {
+                    timer_init(timer, &task->fifo, 1);
+                    cursor_c = BLACK;
+                }
+                timer_settime(timer, 50);
             }
+            if (256 <= data && data <= 511)
+            { /* キーボードデータ（タスクA経由） */
+                if (data == 8 + 256)
+                {
+                    /* バックスペース */
+                    if (cursor_x > 16)
+                    {
+                        /* カーソルをスペースで消してから、カーソルを1つ戻す */
+                        putfont8_asc_sht(sheet, cursor_x, 28, WHITE, BLACK, " ", 1);
+                        cursor_x -= 8;
+                    }
+                }
+                else
+                {
+                    /* 一般文字 */
+                    if (cursor_x < 240)
+                    {
+                        /* 一文字表示してから、カーソルを1つ進める */
+                        s[0] = data - 256;
+                        s[1] = 0;
+                        putfont8_asc_sht(sheet, cursor_x, 28, WHITE, BLACK, s, 1);
+                        cursor_x += 8;
+                    }
+                }
+            }
+
+            boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+            sheet_refresh(sheet, cursor_x, 28, cursor_x + 8, 44);
         }
     }
 }

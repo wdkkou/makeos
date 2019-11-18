@@ -217,6 +217,13 @@ void HariMain(void)
                         fifo32_put(&task_cons->fifo, 8 + 256);
                     }
                 }
+                if (i == 256 + 0x1c) /* Enter */
+                {
+                    if (key_to != 0)
+                    {
+                        fifo32_put(&task_cons->fifo, 10 + 256);
+                    }
+                }
                 /* tab */
                 if (i == 256 + 0x0f)
                 {
@@ -492,7 +499,7 @@ void console_task(struct SHEET *sheet)
     putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, ">", 1);
 
     char s[2];
-    int cursor_x = 16, cursor_c = -1;
+    int cursor_x = 16, cursor_y = 28, cursor_c = -1;
     while (1)
     {
         io_cli();
@@ -542,8 +549,18 @@ void console_task(struct SHEET *sheet)
                     if (cursor_x > 16)
                     {
                         /* カーソルをスペースで消してから、カーソルを1つ戻す */
-                        putfont8_asc_sht(sheet, cursor_x, 28, WHITE, BLACK, " ", 1);
+                        putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, " ", 1);
                         cursor_x -= 8;
+                    }
+                }
+                else if (data == 10 + 256)
+                {
+                    if (cursor_y < 28 + 112)
+                    {
+                        putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, " ", 1);
+                        cursor_y += 16;
+                        putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, ">", 1);
+                        cursor_x = 16;
                     }
                 }
                 else
@@ -554,7 +571,7 @@ void console_task(struct SHEET *sheet)
                         /* 一文字表示してから、カーソルを1つ進める */
                         s[0] = data - 256;
                         s[1] = 0;
-                        putfont8_asc_sht(sheet, cursor_x, 28, WHITE, BLACK, s, 1);
+                        putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, s, 1);
                         cursor_x += 8;
                     }
                 }
@@ -562,9 +579,9 @@ void console_task(struct SHEET *sheet)
             /* カーソル再表示 */
             if (cursor_c >= 0)
             {
-                boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, cursor_y, cursor_x + 7, cursor_y + 15);
             }
-            sheet_refresh(sheet, cursor_x, 28, cursor_x + 8, 44);
+            sheet_refresh(sheet, cursor_x, cursor_y, cursor_x + 8, cursor_y + 16);
         }
     }
 }

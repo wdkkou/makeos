@@ -1,6 +1,9 @@
 /* mysprintf.c */
 void sprintf(char *str, char *fmt, ...);
 
+/* mystrcmp.c */
+int strcmp(char *str1, char *str2);
+
 /* nasmfunc.asm */
 void io_hlt(void);
 void io_cli(void);
@@ -58,6 +61,7 @@ struct BOOTINFO
 };
 
 #define ADR_BOOTINFO 0x00000ff0
+#define ADR_DISKIMG 0x00100000
 
 /* dsctbl.c */
 struct SEGMENT_DESCRIPTOR

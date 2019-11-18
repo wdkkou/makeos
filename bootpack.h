@@ -1,6 +1,9 @@
 /* mysprintf.c */
 void sprintf(char *str, char *fmt, ...);
 
+/* mystrcmp.c */
+int strcmp(char *str1, char *str2);
+
 /* nasmfunc.asm */
 void io_hlt(void);
 void io_cli(void);

@@ -5,7 +5,8 @@ void putfont8_asc_sht(struct SHEET *sht, int x, int y,
                       int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0,
                    int sx, int sy, int c);
-void console_task(struct SHEET *sheet);
+void console_task(struct SHEET *sheet, unsigned int memtotal);
+int cons_newline(int cursor_y, struct SHEET *sheet);
 
 #define KEYCMD_LED 0xed
 
@@ -100,6 +101,7 @@ void HariMain(void)
     task_cons->tss.fs = 1 * 8;
     task_cons->tss.gs = 1 * 8;
     *((int *)(task_cons->tss.esp + 4)) = (int)sht_cons;
+    *((int *)(task_cons->tss.esp + 8)) = memtotal;
     task_run(task_cons, 2, 2); /*level=2 ,priority=2*/
 
     /* sht_mouse */
@@ -119,11 +121,11 @@ void HariMain(void)
     sheet_updown(sht_window, 2);
     sheet_updown(sht_mouse, 3);
 
-    sprintf(s, "mouse (%d, %d)", mx, my);
-    putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 15);
+    // sprintf(s, "mouse (%d, %d)", mx, my);
+    // putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 15);
 
-    sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
-    putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
+    // sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
+    // putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
 
     int i;
     int key_to = 0, key_shift = 0;
@@ -157,8 +159,8 @@ void HariMain(void)
             /* キーボードデータ */
             if (256 <= i && i < 512)
             {
-                sprintf(s, "keycode %x", i - 256);
-                putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
+                // sprintf(s, "keycode %x", i - 256);
+                // putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
 
                 if (i < 0x80 + 256) /* キーコードを文字コードに変換 */
                 {
@@ -303,19 +305,19 @@ void HariMain(void)
                 if (mouse_decode(&mdec, i - 512) != 0)
                 {
                     sprintf(s, "[lcr %d %d]", mdec.x, mdec.y);
-                    if ((mdec.btn & 0x01) != 0)
-                    {
-                        s[1] = 'L';
-                    }
-                    if ((mdec.btn & 0x02) != 0)
-                    {
-                        s[3] = 'R';
-                    }
-                    if ((mdec.btn & 0x04) != 0)
-                    {
-                        s[2] = 'C';
-                    }
-                    putfont8_asc_sht(sht_back, 32, 32, WHITE, COL8_008400, s, 15);
+                    // if ((mdec.btn & 0x01) != 0)
+                    // {
+                    //     s[1] = 'L';
+                    // }
+                    // if ((mdec.btn & 0x02) != 0)
+                    // {
+                    //     s[3] = 'R';
+                    // }
+                    // if ((mdec.btn & 0x04) != 0)
+                    // {
+                    //     s[2] = 'C';
+                    // }
+                    // putfont8_asc_sht(sht_back, 32, 32, WHITE, COL8_008400, s, 15);
                     /* マウスカーソルの移動 */
                     mx += mdec.x;
                     my += mdec.y;
@@ -335,10 +337,9 @@ void HariMain(void)
                     {
                         my = binfo->scrny - 1;
                     }
-                    sprintf(s, "mouse (%d, %d)", mx, my);
-                    putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 17);
+                    // sprintf(s, "mouse (%d, %d)", mx, my);
+                    // putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 17);
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
-
                     if ((mdec.btn & 0x01) != 0)
                     {
                         sheet_slide(sht_window, mx - 80, my - 8);
@@ -483,11 +484,12 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
     return;
 }
 
-void console_task(struct SHEET *sheet)
+void console_task(struct SHEET *sheet, unsigned int memtotal)
 {
     struct FIFO32 fifo;
     int fifobuf[128];
     struct TASK *task = task_now();
+    struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
 
     fifo32_init(&task->fifo, 128, fifobuf, task);
 
@@ -496,10 +498,11 @@ void console_task(struct SHEET *sheet)
     timer_settime(timer, 50);
 
     /* プロンプト表示 */
-    putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, ">", 1);
+    putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, "$ ", 2);
 
-    char s[2];
-    int cursor_x = 16, cursor_y = 28, cursor_c = -1;
+    char s[30];
+    char cmdline[30];
+    int cursor_x = 24, cursor_y = 28, cursor_c = -1;
     while (1)
     {
         io_cli();
@@ -546,7 +549,7 @@ void console_task(struct SHEET *sheet)
                 if (data == 8 + 256)
                 {
                     /* バックスペース */
-                    if (cursor_x > 16)
+                    if (cursor_x > 24)
                     {
                         /* カーソルをスペースで消してから、カーソルを1つ戻す */
                         putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, " ", 1);
@@ -556,30 +559,26 @@ void console_task(struct SHEET *sheet)
                 else if (data == 10 + 256)
                 {
                     putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, " ", 1);
-                    if (cursor_y < 28 + 112)
+                    cmdline[cursor_x / 8 - 3] = 0;
+                    cursor_y = cons_newline(cursor_y, sheet);
+                    /* コマンド実行 */
+                    if (cmdline[0] == 'm' && cmdline[1] == 'e' && cmdline[2] == 'm' && cmdline[3] == 0)
                     {
-                        cursor_y += 16;
+                        sprintf(s, "total %dMB", memtotal / (1024 * 1024));
+                        putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, s, 30);
+                        cursor_y = cons_newline(cursor_y, sheet);
+                        sprintf(s, "free %dKB", memman_total(memman) / 1024);
+                        putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, s, 30);
+                        cursor_y = cons_newline(cursor_y, sheet);
                     }
-                    else
+                    else if (cmdline[0] != 0)
                     {
-                        for (int y = 28; y < 28 + 112; y++)
-                        {
-                            for (int x = 8; x < 8 + 240; x++)
-                            {
-                                sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
-                            }
-                        }
-                        for (int y = 28 + 112; y < 28 + 128; y++)
-                        {
-                            for (int x = 8; x < 8 + 240; x++)
-                            {
-                                sheet->buf[x + y * sheet->bxsize] = BLACK;
-                            }
-                        }
-                        sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+                        putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, "command error", 15);
+                        cursor_y = cons_newline(cursor_y, sheet);
                     }
-                    putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, ">", 1);
-                    cursor_x = 16;
+                    /* プロンプト表示 */
+                    putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, "$ ", 2);
+                    cursor_x = 24;
                 }
                 else
                 {
@@ -589,6 +588,7 @@ void console_task(struct SHEET *sheet)
                         /* 一文字表示してから、カーソルを1つ進める */
                         s[0] = data - 256;
                         s[1] = 0;
+                        cmdline[cursor_x / 8 - 3] = data - 256;
                         putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, s, 1);
                         cursor_x += 8;
                     }
@@ -602,4 +602,30 @@ void console_task(struct SHEET *sheet)
             sheet_refresh(sheet, cursor_x, cursor_y, cursor_x + 8, cursor_y + 16);
         }
     }
+}
+int cons_newline(int cursor_y, struct SHEET *sheet)
+{
+    if (cursor_y < 28 + 112)
+    {
+        cursor_y += 16;
+    }
+    else
+    {
+        for (int y = 28; y < 28 + 112; y++)
+        {
+            for (int x = 8; x < 8 + 240; x++)
+            {
+                sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+            }
+        }
+        for (int y = 28 + 112; y < 28 + 128; y++)
+        {
+            for (int x = 8; x < 8 + 240; x++)
+            {
+                sheet->buf[x + y * sheet->bxsize] = BLACK;
+            }
+        }
+        sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+    }
+    return cursor_y;
 }

@@ -225,12 +225,17 @@ void HariMain(void)
                         key_to = 1;
                         make_wtitle8(buf_win, sht_window->bxsize, "task_a", 0);
                         make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
+                        cursor_c = -1; /* カーソルを消す*/
+                        boxfill8(sht_window->buf, sht_window->bxsize, WHITE, cursor_x, 28, cursor_x + 7, 43);
+                        fifo32_put(&task_cons->fifo, 2); /*コンソールのカーソルON*/
                     }
                     else
                     {
                         key_to = 0;
                         make_wtitle8(buf_win, sht_window->bxsize, "task_a", 1);
                         make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
+                        cursor_c = BLACK;                /* カーソルを出す*/
+                        fifo32_put(&task_cons->fifo, 3); /*コンソールのカーソルOFF*/
                     }
                     sheet_refresh(sht_window, 0, 0, sht_window->bxsize, 21);
                     sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
@@ -279,7 +284,10 @@ void HariMain(void)
                     io_out8(PORT_KEYDAT, keycmd_wait);
                 }
                 /*カーソルの再表示*/
-                boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                if (cursor_c >= 0)
+                {
+                    boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                }
                 sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
             }
             /* マウスデータ */
@@ -341,18 +349,30 @@ void HariMain(void)
             else if (i == 1)
             {
                 timer_init(timer, &fifo, 0);
-                cursor_c = BLACK;
+                if (cursor_c >= 0)
+                {
+                    cursor_c = BLACK;
+                }
                 timer_settime(timer, 50);
-                boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
-                sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
+                if (cursor_c >= 0)
+                {
+                    boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                    sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
+                }
             }
             else if (i == 0)
             {
                 timer_init(timer, &fifo, 1);
-                cursor_c = WHITE;
+                if (cursor_c >= 0)
+                {
+                    cursor_c = WHITE;
+                }
                 timer_settime(timer, 50);
-                boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
-                sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
+                if (cursor_c >= 0)
+                {
+                    boxfill8(sht_window->buf, sht_window->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+                    sheet_refresh(sht_window, cursor_x, 28, cursor_x + 8, 44);
+                }
             }
         }
     }
@@ -472,7 +492,7 @@ void console_task(struct SHEET *sheet)
     putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, ">", 1);
 
     char s[2];
-    int cursor_x = 16, cursor_c = BLACK;
+    int cursor_x = 16, cursor_c = -1;
     while (1)
     {
         io_cli();
@@ -490,14 +510,29 @@ void console_task(struct SHEET *sheet)
                 if (data != 0)
                 {
                     timer_init(timer, &task->fifo, 0);
-                    cursor_c = WHITE;
+                    if (cursor_c >= 0)
+                    {
+                        cursor_c = WHITE;
+                    }
                 }
                 else
                 {
                     timer_init(timer, &task->fifo, 1);
-                    cursor_c = BLACK;
+                    if (cursor_c >= 0)
+                    {
+                        cursor_c = BLACK;
+                    }
                 }
                 timer_settime(timer, 50);
+            }
+            if (data == 2) /* カーソルon */
+            {
+                cursor_c = WHITE;
+            }
+            if (data == 3) /* カーソルOFF */
+            {
+                boxfill8(sheet->buf, sheet->bxsize, BLACK, cursor_x, 28, cursor_x + 7, 43);
+                cursor_c = -1;
             }
             if (256 <= data && data <= 511)
             { /* キーボードデータ（タスクA経由） */
@@ -524,8 +559,11 @@ void console_task(struct SHEET *sheet)
                     }
                 }
             }
-
-            boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+            /* カーソル再表示 */
+            if (cursor_c >= 0)
+            {
+                boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+            }
             sheet_refresh(sheet, cursor_x, 28, cursor_x + 8, 44);
         }
     }

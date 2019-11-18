@@ -61,6 +61,7 @@ struct BOOTINFO
 };
 
 #define ADR_BOOTINFO 0x00000ff0
+#define ADR_DISKIMG 0x00100000
 
 /* dsctbl.c */
 struct SEGMENT_DESCRIPTOR

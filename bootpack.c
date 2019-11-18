@@ -1,5 +1,13 @@
 #include "bootpack.h"
 
+struct FILEINFO
+{
+    unsigned char name[8], ext[3], type;
+    char reserve[10];
+    unsigned short time, date, clustno;
+    unsigned int size;
+};
+
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void putfont8_asc_sht(struct SHEET *sht, int x, int y,
                       int c, int b, char *s, int l);
@@ -490,6 +498,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
     int fifobuf[128];
     struct TASK *task = task_now();
     struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
+    struct FILEINFO *finfo = (struct FILEINFO *)(ADR_DISKIMG + 0x002600);
 
     fifo32_init(&task->fifo, 128, fifobuf, task);
 
@@ -582,6 +591,32 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
                         }
                         sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
                         cursor_y = 28;
+                    }
+                    else if (strcmp(cmdline, "ls") == 0)
+                    {
+                        for (int x = 0; x < 224; x++)
+                        {
+                            if (finfo[x].name[0] == 0x00)
+                            {
+                                break;
+                            }
+                            if (finfo[x].name[0] != 0xe5)
+                            {
+                                if ((finfo[x].type & 0x18) == 0)
+                                {
+                                    sprintf(s, "filename.ext %d", finfo[x].size);
+                                    for (int y = 0; y < 8; y++)
+                                    {
+                                        s[y] = finfo[x].name[y];
+                                    }
+                                    s[9] = finfo[x].ext[0];
+                                    s[10] = finfo[x].ext[1];
+                                    s[11] = finfo[x].ext[2];
+                                    putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, s, 30);
+                                    cursor_y = cons_newline(cursor_y, sheet);
+                                }
+                            }
+                        }
                     }
                     else if (cmdline[0] != 0)
                     {

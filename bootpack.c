@@ -555,13 +555,31 @@ void console_task(struct SHEET *sheet)
                 }
                 else if (data == 10 + 256)
                 {
+                    putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, " ", 1);
                     if (cursor_y < 28 + 112)
                     {
-                        putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, " ", 1);
                         cursor_y += 16;
-                        putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, ">", 1);
-                        cursor_x = 16;
                     }
+                    else
+                    {
+                        for (int y = 28; y < 28 + 112; y++)
+                        {
+                            for (int x = 8; x < 8 + 240; x++)
+                            {
+                                sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+                            }
+                        }
+                        for (int y = 28 + 112; y < 28 + 128; y++)
+                        {
+                            for (int x = 8; x < 8 + 240; x++)
+                            {
+                                sheet->buf[x + y * sheet->bxsize] = BLACK;
+                            }
+                        }
+                        sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+                    }
+                    putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, ">", 1);
+                    cursor_x = 16;
                 }
                 else
                 {

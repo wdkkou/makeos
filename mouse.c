@@ -3,8 +3,7 @@
 struct FIFO32 *mousefifo;
 int mousedata0;
 /* ps/2 mouse 割り込み */
-void inthandler2c(int *esp)
-{
+void inthandler2c(int *esp) {
     int data;
     io_out8(PIC1_OCW2, 0x64); /* IRQ-12受付完了をPIC1に通知 */
     io_out8(PIC0_OCW2, 0x62); /* IRQ-02受付完了をPIC0に通知 */
@@ -16,10 +15,9 @@ void inthandler2c(int *esp)
 #define KEYCMD_SENDTO_MOUSE 0xd4
 #define MOUSECMD_ENABLE 0xf4
 /* マウス有効 */
-void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec)
-{
+void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec) {
     /* 書き込み先のFIFOバッファを記憶 */
-    mousefifo = fifo;
+    mousefifo  = fifo;
     mousedata0 = data0;
     wait_KBC_sendready();
     io_out8(PORT_KEYCMD, KEYCMD_SENDTO_MOUSE);
@@ -28,44 +26,35 @@ void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec)
     mdec->phase = 0;
     return;
 }
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data)
-{
-    if (mdec->phase == 0)
-    {
-        if (data == 0xfa)
-        {
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data) {
+    if (mdec->phase == 0) {
+        if (data == 0xfa) {
             mdec->phase = 1;
         }
         return 0;
     }
-    if (mdec->phase == 1)
-    {
-        if ((data & 0xc8) == 0x08)
-        {
+    if (mdec->phase == 1) {
+        if ((data & 0xc8) == 0x08) {
             mdec->buf[0] = data;
-            mdec->phase = 2;
+            mdec->phase  = 2;
         }
         return 0;
     }
-    if (mdec->phase == 2)
-    {
+    if (mdec->phase == 2) {
         mdec->buf[1] = data;
-        mdec->phase = 3;
+        mdec->phase  = 3;
         return 0;
     }
-    if (mdec->phase == 3)
-    {
+    if (mdec->phase == 3) {
         mdec->buf[2] = data;
-        mdec->phase = 1;
-        mdec->btn = mdec->buf[0] & 0x07;
-        mdec->x = mdec->buf[1];
-        mdec->y = mdec->buf[2];
-        if ((mdec->buf[0] & 0x10) != 0)
-        {
+        mdec->phase  = 1;
+        mdec->btn    = mdec->buf[0] & 0x07;
+        mdec->x      = mdec->buf[1];
+        mdec->y      = mdec->buf[2];
+        if ((mdec->buf[0] & 0x10) != 0) {
             mdec->x |= 0xffffff00;
         }
-        if ((mdec->buf[0] & 0x20) != 0)
-        {
+        if ((mdec->buf[0] & 0x20) != 0) {
             mdec->y |= 0xffffff00;
         }
         mdec->y = -mdec->y;

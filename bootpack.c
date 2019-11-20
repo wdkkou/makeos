@@ -122,7 +122,7 @@ void HariMain(void)
 
     sheet_slide(sht_back, 0, 0);
     sheet_slide(sht_cons, 32, 4);
-    sheet_slide(sht_window, 64, 56);
+    sheet_slide(sht_window, 64, 150);
     sheet_slide(sht_mouse, mx, my);
     sheet_updown(sht_back, 0);
     sheet_updown(sht_cons, 1);
@@ -585,6 +585,87 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
                                 }
                             }
                         }
+                    }
+                    else if (cmdline[0] == 'c' && cmdline[1] == 'a' && cmdline[2] == 't' && cmdline[3] == ' ')
+                    {
+                        /* catコマンド */
+                        for (int y = 0; y < 11; y++)
+                        {
+                            s[y] = ' ';
+                        }
+                        for (int x = 4, y = 0; y < 11 && cmdline[x] != 0; x++, y++)
+                        {
+                            if (cmdline[x] == '.' && y <= 8)
+                            {
+                                y = 7;
+                            }
+                            else
+                            {
+                                s[y] = cmdline[x];
+                                if ('a' <= s[y] && s[y] <= 'z')
+                                {
+                                    /* 小文字を大文字に変換 */
+                                    s[y] -= 0x20;
+                                }
+                            }
+                        }
+
+                        /* ファイルを探す */
+                        int exist_file = 0;
+                        int file_x = 224;
+                        for (int x = 0; x < 224; x++)
+                        {
+                            if (finfo[x].name[0] == 0x00)
+                            {
+                                exist_file = 0;
+                                file_x = x;
+                                break;
+                            }
+                            if ((finfo[x].type & 0x18) == 0)
+                            {
+                                int ok = 1;
+                                for (int y = 0; y < 11; y++)
+                                {
+                                    if (finfo[x].name[y] != s[y])
+                                    {
+                                        ok = 0;
+                                        break;
+                                    }
+                                }
+                                if (ok)
+                                {
+                                    /* ファイルが見つかった */
+                                    exist_file = 1;
+                                    file_x = x;
+                                    break;
+                                }
+                            }
+                        }
+                        if (exist_file)
+                        {
+                            /* ファイルが見つかった場合 */
+                            int y = finfo[file_x].size;
+                            char *p = (char *)(finfo[file_x].clustno * 512 + 0x003e00 + ADR_DISKIMG);
+                            cursor_x = 8;
+                            for (int x = 0; x < y; x++)
+                            {
+                                s[0] = p[x];
+                                s[1] = 0;
+                                putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, s, 1);
+                                cursor_x += 8;
+                                if (cursor_x == 8 + 240)
+                                {
+                                    cursor_x = 8;
+                                    cursor_y = cons_newline(cursor_y, sheet);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            /* ファイルが見つからなかった場合 */
+                            putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, "file not found.", 15);
+                        }
+                        cursor_y = cons_newline(cursor_y, sheet);
                     }
                     else if (cmdline[0] != 0)
                     {

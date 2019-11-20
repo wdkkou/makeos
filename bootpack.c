@@ -129,12 +129,6 @@ void HariMain(void)
     sheet_updown(sht_window, 2);
     sheet_updown(sht_mouse, 3);
 
-    // sprintf(s, "mouse (%d, %d)", mx, my);
-    // putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 15);
-
-    // sprintf(s, "memory = %dMB , free = %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
-    // putfont8_asc_sht(sht_back, 0, 50, WHITE, COL8_008400, s, 28);
-
     int i;
     int key_to = 0, key_shift = 0;
     int key_leds = (binfo->leds >> 4) & 7;
@@ -167,9 +161,6 @@ void HariMain(void)
             /* キーボードデータ */
             if (256 <= i && i < 512)
             {
-                // sprintf(s, "keycode %x", i - 256);
-                // putfont8_asc_sht(sht_back, 0, 16, WHITE, COL8_008400, s, 11);
-
                 if (i < 0x80 + 256) /* キーコードを文字コードに変換 */
                 {
                     if (key_shift == 0)
@@ -312,20 +303,6 @@ void HariMain(void)
             {
                 if (mouse_decode(&mdec, i - 512) != 0)
                 {
-                    // sprintf(s, "[lcr %d %d]", mdec.x, mdec.y);
-                    // if ((mdec.btn & 0x01) != 0)
-                    // {
-                    //     s[1] = 'L';
-                    // }
-                    // if ((mdec.btn & 0x02) != 0)
-                    // {
-                    //     s[3] = 'R';
-                    // }
-                    // if ((mdec.btn & 0x04) != 0)
-                    // {
-                    //     s[2] = 'C';
-                    // }
-                    // putfont8_asc_sht(sht_back, 32, 32, WHITE, COL8_008400, s, 15);
                     /* マウスカーソルの移動 */
                     mx += mdec.x;
                     my += mdec.y;
@@ -345,7 +322,6 @@ void HariMain(void)
                     {
                         my = binfo->scrny - 1;
                     }
-                    // sprintf(s, "mouse (%d, %d)", mx, my);
                     putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 17);
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
                     if ((mdec.btn & 0x01) != 0)
@@ -353,14 +329,6 @@ void HariMain(void)
                         sheet_slide(sht_window, mx - 80, my - 8);
                     }
                 }
-            }
-            else if (i == 10)
-            {
-                putfont8_asc_sht(sht_back, 0, 80, WHITE, COL8_008400, "10 sec", 7);
-            }
-            else if (i == 3)
-            {
-                putfont8_asc_sht(sht_back, 0, 64, WHITE, COL8_008400, "3 sec", 6);
             }
             else if (i == 1)
             {

@@ -12,6 +12,8 @@ void putfont8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, in
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 void console_task(struct SHEET *sheet, unsigned int memtotal);
 int cons_newline(int cursor_y, struct SHEET *sheet);
+void file_readfat(int *fat, unsigned char *img);
+void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
 
 #define KEYCMD_LED 0xed
 
@@ -405,6 +407,9 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
     timer_init(timer, &task->fifo, 1);
     timer_settime(timer, 50);
 
+    int *fat = (int *)memman_alloc_4k(memman, 4 * 2880);
+    file_readfat(fat, (unsigned char *)(ADR_DISKIMG + 0x000200));
+
     /* プロンプト表示 */
     putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, "$ ", 2);
 
@@ -535,16 +540,17 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
                         }
                         if (exist_file) {
                             /* ファイルが見つかった場合 */
-                            int y    = finfo[file_x].size;
-                            char *p  = (char *)(finfo[file_x].clustno * 512 + 0x003e00 + ADR_DISKIMG);
+                            int y   = finfo[file_x].size;
+                            char *p = (char *)memman_alloc_4k(memman, finfo[file_x].size);
+                            file_loadfile(finfo[file_x].clustno, finfo[file_x].size, p,
+                                          fat, (char *)(ADR_DISKIMG + 0x003e00));
                             cursor_x = 8;
-                            for (int x = 0; x < y; x++) {
-                                s[0] = p[x];
+                            for (int y = 0; y < finfo[file_x].size; y++) {
+                                s[0] = p[y];
                                 s[1] = 0;
                                 if (s[0] == 0x09) {
                                     while (1) {
-                                        putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK,
-                                                         " ", 1);
+                                        putfont8_asc_sht(sheet, cursor_x, cursor_y, WHITE, BLACK, " ", 1);
                                         cursor_x += 8;
                                         if (cursor_x == 8 + 240) {
                                             cursor_x = 8;
@@ -567,6 +573,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
                                     }
                                 }
                             }
+                            memman_free_4k(memman, (int)p, finfo[file_x].size);
                         } else {
                             /* ファイルが見つからなかった場合 */
                             putfont8_asc_sht(sheet, 8, cursor_y, WHITE, BLACK, "fIle not found.", 15);
@@ -618,4 +625,30 @@ int cons_newline(int cursor_y, struct SHEET *sheet) {
         sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
     }
     return cursor_y;
+}
+
+void file_readfat(int *fat, unsigned char *img) {
+    for (int i = 0, j = 0; i < 2800; i += 2, j += 3) {
+        fat[i + 0] = (img[j + 0] | img[j + 1] << 8) & 0xfff;
+        fat[i + 1] = (img[j + 1] >> 4 | img[j + 2] << 4) & 0xfff;
+    }
+
+    return;
+}
+void file_loadfile(int clustno, int size, char *buf, int *fat, char *img) {
+    while (1) {
+        if (size <= 512) {
+            for (int i = 0; i < size; i++) {
+                buf[i] = img[clustno * 512 + i];
+            }
+            break;
+        }
+        for (int i = 0; i < 512; i++) {
+            buf[i] = img[clustno * 512 + i];
+        }
+        size -= 512;
+        buf += 512;
+        clustno = fat[clustno];
+    }
+    return;
 }

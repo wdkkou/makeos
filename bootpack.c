@@ -550,7 +550,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
             }
             if (data == 3) /* カーソルOFF */
             {
-                boxfill8(sheet->buf, sheet->bxsize, BLACK, cursor_x, 28, cursor_x + 7, 43);
+                boxfill8(sheet->buf, sheet->bxsize, BLACK, cursor_x, 28, cursor_x + 7, cursor_y + 15);
                 cursor_c = -1;
             }
             if (256 <= data && data <= 511)

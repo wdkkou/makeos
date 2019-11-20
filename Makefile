@@ -1,6 +1,7 @@
 CC := gcc
 CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
-OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o mystrcmp.o graphic.o dsctbl.o int.o fifo.o mouse.o keyboard.o memory.o sheet.o timer.o mtask.o
+OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o mystrcmp.o graphic.o dsctbl.o int.o \
+				fifo.o mouse.o keyboard.o memory.o sheet.o timer.o mtask.o window.o console.o file.o
 # デフォルト動作
 
 all :
@@ -29,10 +30,11 @@ bootpack.hrb : $(OBJ_ALL) har.ls Makefile
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
 
-haribote.img : ipl.bin haribote.sys Makefile
+haribote.img : ipl.bin hlt.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
+	mcopy hlt.bin -i haribote.img ::
 	mcopy ipl.asm -i haribote.img ::
 
 # コマンド

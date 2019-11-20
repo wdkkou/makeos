@@ -3,6 +3,7 @@ void sprintf(char *str, char *fmt, ...);
 
 /* mystrcmp.c */
 int strcmp(char *str1, char *str2);
+int strncmp(char *str1, char *str2, int size);
 
 /* nasmfunc.asm */
 void io_hlt(void);
@@ -53,8 +54,7 @@ void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py
 #define COL8_848484 15
 
 /* asmhead.asm */
-struct BOOTINFO
-{
+struct BOOTINFO {
     char cyls, leds, vmode, reserve;
     short scrnx, scrny;
     char *vram;
@@ -64,15 +64,13 @@ struct BOOTINFO
 #define ADR_DISKIMG 0x00100000
 
 /* dsctbl.c */
-struct SEGMENT_DESCRIPTOR
-{
+struct SEGMENT_DESCRIPTOR {
     short limit_low, base_low;
     char base_mid, access_right;
     char limit_high, base_high;
 };
 
-struct GATE_DESCRIPTOR
-{
+struct GATE_DESCRIPTOR {
     short offset_low, selector;
     char dw_count, access_right;
     short offset_high;
@@ -110,8 +108,7 @@ void init_pic(void);
 #define PIC1_ICW4 0x00a1
 
 /* fifo.c */
-struct FIFO32
-{
+struct FIFO32 {
     int *buf;
     int p, q, size, free, flags;
     struct TASK *task;
@@ -129,8 +126,7 @@ void init_keyboard(struct FIFO32 *fifo, int data0);
 #define PORT_KEYCMD 0x0064
 
 /* mouse.c */
-struct MOUSE_DEC
-{
+struct MOUSE_DEC {
     unsigned char buf[3], phase;
     int x, y, btn;
 };
@@ -143,14 +139,12 @@ int mouse_decode(struct MOUSE_DEC *mdec, unsigned char data);
 #define MEM_ADDR 0x003c0000
 
 /* 空き情報 */
-struct FREEINFO
-{
+struct FREEINFO {
     unsigned int addr, size;
 };
 
 /* メモリ管理 */
-struct MEMMAN
-{
+struct MEMMAN {
     int frees, maxfrees, lostsize, losts;
     struct FREEINFO free[MEM_FREES];
 };
@@ -165,15 +159,13 @@ int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size);
 
 /* sheet.c */
 #define MAX_SHEETS 256
-struct SHEET
-{
+struct SHEET {
     unsigned char *buf;
     int bxsize, bysize, vx0, vy0, col_inv, height, flags;
     struct SHTCTL *ctl;
 };
 
-struct SHTCTL
-{
+struct SHTCTL {
     unsigned char *vram, *map;
     int xsize, ysize, top;
     struct SHEET *sheets[MAX_SHEETS];
@@ -193,15 +185,13 @@ void sheet_free(struct SHEET *sht);
 /* timer.c */
 #define MAX_TIMES 500
 
-struct TIMER
-{
+struct TIMER {
     struct TIMER *next;
     unsigned int timeout, flags;
     struct FIFO32 *fifo;
     int data;
 };
-struct TIMERCTL
-{
+struct TIMERCTL {
     unsigned int count, next;
     struct TIMER *t0;
     struct TIMER timers0[MAX_TIMES];
@@ -222,28 +212,24 @@ void inthandler20(int *esp);
 #define MAX_TASKS_LV 100
 #define MAX_TASKLEVEL 10
 
-struct TSS32
-{
+struct TSS32 {
     int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
     int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
     int es, cs, ss, ds, fs, gs;
     int ldtr, iomap;
 };
-struct TASK
-{
+struct TASK {
     int sel, flags; /* selはGDTの番号のこと */
     int level, priority;
     struct FIFO32 fifo;
     struct TSS32 tss;
 };
-struct TASKLEVEL
-{
+struct TASKLEVEL {
     int running; /* 動作しているタスクの数 */
     int now;     /* 現在動作しているタスクがどれだか分かるようにするための変数 */
     struct TASK *tasks[MAX_TASKS_LV]
 };
-struct TASKCTL
-{
+struct TASKCTL {
     int now_lv;     /* 動作中のレベル */
     char lv_change; /* 次回のタスクスイッチの時にレベルを変えたほうがいいかどうか */
     struct TASKLEVEL level[MAX_TASKLEVEL];

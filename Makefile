@@ -32,8 +32,8 @@ haribote.sys : asmhead.bin bootpack.hrb Makefile
 haribote.img : ipl.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
-	mcopy mysprintf.c -i haribote.img ::
-	mcopy hankaku.txt -i haribote.img ::
+	mcopy cat.txt -i haribote.img ::
+	mcopy ipl.asm -i haribote.img ::
 
 # コマンド
 

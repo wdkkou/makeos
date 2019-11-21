@@ -10,8 +10,10 @@
     GLOBAL  load_tr
     GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20
     GLOBAL  memtest_sub
-    GLOBAL  farjmp
+    GLOBAL  farjmp, farcall
+    GLOBAL  asm_cons_putchar
     EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20
+    EXTERN  cons_putchar
 
 bits 32
 section .text
@@ -204,3 +206,17 @@ mts_fin:
 farjmp:
         jmp far [esp+4]
         ret
+
+farcall:
+        call far [esp+4]
+        ret
+
+asm_cons_putchar:
+        sti
+        push 1
+        and eax, 0xff
+        push eax
+        push dword [0x0fec]
+        call cons_putchar
+        add esp, 12
+        iretd

@@ -25,3 +25,40 @@ void file_loadfile(int clustno, int size, char *buf, int *fat, char *img) {
     }
     return;
 }
+
+struct FILEINFO *file_search(char *name, struct FILEINFO *finfo, int max) {
+    char s[12];
+    for (int y = 0; y < 11; y++) {
+        s[y] = ' ';
+    }
+    for (int x = 0, y = 0; y < 11 && name[x] != 0; x++, y++) {
+        if (name[x] == '.' && y <= 8) {
+            y = 7;
+        } else {
+            s[y] = name[x];
+            if ('a' <= s[y] && s[y] <= 'z') {
+                /* 小文字を大文字に変換 */
+                s[y] -= 0x20;
+            }
+        }
+    }
+    for (int x = 0; x < max; x++) {
+        if (finfo[x].name[0] == 0x00) {
+            break;
+        }
+        if ((finfo[x].type & 0x18) == 0) {
+            int exist_file = 1;
+            for (int y = 0; y < 11; y++) {
+                if (finfo[x].name[y] != s[y]) {
+                    exist_file = 0;
+                    break;
+                }
+            }
+            if (exist_file) {
+                /* ファイルが見つかった */
+                return finfo + x;
+            }
+        }
+    }
+    return 0;
+}

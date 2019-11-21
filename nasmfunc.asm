@@ -10,8 +10,10 @@
     GLOBAL  load_tr
     GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20
     GLOBAL  memtest_sub
-    GLOBAL  farjmp
+    GLOBAL  farjmp, farcall
+    GLOBAL  asm_bin_api
     EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20
+    EXTERN  bin_api
 
 bits 32
 section .text
@@ -204,3 +206,16 @@ mts_fin:
 farjmp:
         jmp far [esp+4]
         ret
+
+farcall:
+        call far [esp+4]
+        ret
+
+asm_bin_api:
+        sti
+        pushad ; 保存のためのpush
+        pushad ; bin_apiに渡すためのpush
+        call bin_api
+        add  esp, 32
+        popad
+        iretd

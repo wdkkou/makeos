@@ -267,6 +267,8 @@ void cmd_clear(struct CONSOLE *cons);
 void cmd_ls(struct CONSOLE *cons);
 void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline);
 void cmd_hlt(struct CONSOLE *cons, int *fat);
+void cons_putstr(struct CONSOLE *cons, char *s);
+void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
 
 /* file.c */
 struct FILEINFO {

@@ -26,11 +26,8 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
     *((int *)0x0fec) = (int)&cons;
 
     /* プロンプト表示 */
-    // putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, "$ ", 2);
-    cons_putchar(&cons, '$', 1);
-    cons_putchar(&cons, ' ', 1);
+    cons_putstr(&cons, "$ ");
 
-    // int cursor_x = 24, cursor_y = 28, cursor_c = -1;
     while (1) {
         io_cli();
         if (fifo32_status(&task->fifo) == 0) {
@@ -75,8 +72,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
                     cmdline[cons.cur_x / 8 - 3] = 0;
                     cons_newline(&cons);
                     cons_runcmd(cmdline, &cons, fat, memtotal);
-                    cons_putchar(&cons, '$', 1);
-                    cons_putchar(&cons, ' ', 1);
+                    cons_putstr(&cons, "$ ");
                 } else {
                     /* 一般文字 */
                     if (cons.cur_x < 240) {
@@ -146,6 +142,18 @@ void cons_newline(struct CONSOLE *cons) {
     cons->cur_x = 8;
     return;
 }
+void cons_putstr(struct CONSOLE *cons, char *s) {
+    for (; *s != 0; s++) {
+        cons_putchar(cons, *s, 1);
+    }
+    return;
+}
+void cons_putstr_len(struct CONSOLE *cons, char *s, int l) {
+    for (int i = 0; i < l; i++) {
+        cons_putchar(cons, s[i], 1);
+    }
+    return;
+}
 
 void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal) {
     if (strcmp(cmdline, "mem") == 0) {
@@ -159,8 +167,7 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
     } else if (cmdline[0] != 0) {
         if (cmd_app(cons, fat, cmdline) == 0) {
             /* コマンドエラー */
-            putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, "command error.", 15);
-            cons_newline(cons);
+            cons_putstr(cons, "command error.\n");
         }
     }
     return;
@@ -168,13 +175,12 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 
 void cmd_mem(struct CONSOLE *cons, unsigned int memtotal) {
     struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
-    char s[30];
-    sprintf(s, "total %dMB", memtotal / (1024 * 1024));
-    putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, s, 30);
-    cons_newline(cons);
-    sprintf(s, "free %dKB", memman_total(memman) / 1024);
-    putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, s, 30);
-    cons_newline(cons);
+    char s[60];
+    sprintf(s, "total %dMB\n", memtotal / (1024 * 1024));
+    cons_putstr(cons, s);
+    sprintf(s, "free %dKB\n", memman_total(memman) / 1024);
+    cons_putstr(cons, s);
+    return;
 }
 
 void cmd_clear(struct CONSOLE *cons) {
@@ -198,15 +204,14 @@ void cmd_ls(struct CONSOLE *cons) {
         }
         if (finfo[x].name[0] != 0xe5) {
             if ((finfo[x].type & 0x18) == 0) {
-                sprintf(s, "filename.ext %d", finfo[x].size);
+                sprintf(s, "filename.ext %d\n", finfo[x].size);
                 for (int y = 0; y < 8; y++) {
                     s[y] = finfo[x].name[y];
                 }
                 s[9]  = finfo[x].ext[0];
                 s[10] = finfo[x].ext[1];
                 s[11] = finfo[x].ext[2];
-                putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, s, 30);
-                cons_newline(cons);
+                cons_putstr(cons, s);
             }
         }
     }
@@ -220,36 +225,13 @@ void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline) {
     if (finfo != 0) {
         /* ファイルが見つかった場合 */
         char *p = (char *)memman_alloc_4k(memman, finfo->size);
-        file_loadfile(finfo->clustno, finfo->size, p,
-                      fat, (char *)(ADR_DISKIMG + 0x003e00));
-        for (int i = 0; i < finfo->size; i++) {
-            cons_putchar(cons, p[i], 1);
-        }
-        memman_free_4k(memman, (int)p, finfo->size);
-    } else {
-        /* ファイルが見つからなかった場合 */
-        putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, "file not found.", 15);
-    }
-    return;
-}
-
-void cmd_hlt(struct CONSOLE *cons, int *fat) {
-    struct MEMMAN *memman          = (struct MEMMAN *)MEM_ADDR;
-    struct FILEINFO *finfo         = file_search("HLT.BIN", (struct FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
-    struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
-
-    if (finfo) {
-        /* ファイルが見つかった場合 */
-        char *p = (char *)memman_alloc_4k(memman, finfo->size);
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
-        set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER);
-        farcall(0, 1003 * 8);
+        cons_putstr_len(cons, p, finfo->size);
         memman_free_4k(memman, (int)p, finfo->size);
     } else {
         /* ファイルが見つからなかった場合 */
-        putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, "file not found.", 15);
+        cons_putstr(cons, "file not found\n");
     }
-    cons_newline(cons);
     return;
 }
 

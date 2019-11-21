@@ -23,10 +23,10 @@ void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
 void asm_inthandler27(void);
+void asm_bin_api(void);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
 void farcall(int eip, int cs);
-void asm_cons_putchar(void);
 /* graphic.c */
 void init_palette(void);
 void init_screen(char *vram, int x, int y);
@@ -266,9 +266,10 @@ void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
 void cmd_clear(struct CONSOLE *cons);
 void cmd_ls(struct CONSOLE *cons);
 void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline);
-void cmd_hlt(struct CONSOLE *cons, int *fat);
+int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 void cons_putstr(struct CONSOLE *cons, char *s);
 void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
+void bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 
 /* file.c */
 struct FILEINFO {

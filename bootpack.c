@@ -89,7 +89,7 @@ void HariMain(void) {
     make_window8(buf_cons, 256, 165, "console", 0);
     make_textbox8(sht_cons, 8, 28, 240, 128, BLACK);
     struct TASK *task_cons             = task_alloc();
-    task_cons->tss.esp                 = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
+    task_cons->tss.esp                 = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
     task_cons->tss.eip                 = (int)&console_task;
     task_cons->tss.es                  = 1 * 8;
     task_cons->tss.cs                  = 2 * 8;

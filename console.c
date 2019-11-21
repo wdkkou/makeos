@@ -19,10 +19,11 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
 
     char cmdline[30];
     struct CONSOLE cons;
-    cons.sht   = sheet;
-    cons.cur_x = 8;
-    cons.cur_y = 28;
-    cons.cur_c = -1;
+    cons.sht         = sheet;
+    cons.cur_x       = 8;
+    cons.cur_y       = 28;
+    cons.cur_c       = -1;
+    *((int *)0x0fec) = (int)&cons;
 
     /* プロンプト表示 */
     // putfont8_asc_sht(sheet, 8, 28, WHITE, BLACK, "$ ", 2);
@@ -241,7 +242,7 @@ void cmd_hlt(struct CONSOLE *cons, int *fat) {
         char *p = (char *)memman_alloc_4k(memman, finfo->size);
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
         set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER);
-        farjmp(0, 1003 * 8);
+        farcall(0, 1003 * 8);
         memman_free_4k(memman, (int)p, finfo->size);
     } else {
         /* ファイルが見つからなかった場合 */

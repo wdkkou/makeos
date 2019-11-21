@@ -156,11 +156,12 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
         cmd_ls(cons);
     } else if (strncmp(cmdline, "cat ", 4) == 0) {
         cmd_cat(cons, fat, cmdline);
-    } else if (strcmp(cmdline, "hlt") == 0) {
-        cmd_hlt(cons, fat);
     } else if (cmdline[0] != 0) {
-        putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, "command error.", 15);
-        cons_newline(cons);
+        if (cmd_app(cons, fat, cmdline) == 0) {
+            /* コマンドエラー */
+            putfont8_asc_sht(cons->sht, 8, cons->cur_y, WHITE, BLACK, "command error.", 15);
+            cons_newline(cons);
+        }
     }
     return;
 }
@@ -237,7 +238,7 @@ void cmd_hlt(struct CONSOLE *cons, int *fat) {
     struct FILEINFO *finfo         = file_search("HLT.BIN", (struct FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
     struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
 
-    if (finfo != 0) {
+    if (finfo) {
         /* ファイルが見つかった場合 */
         char *p = (char *)memman_alloc_4k(memman, finfo->size);
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
@@ -250,4 +251,43 @@ void cmd_hlt(struct CONSOLE *cons, int *fat) {
     }
     cons_newline(cons);
     return;
+}
+
+int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
+    struct MEMMAN *memman          = (struct MEMMAN *)MEM_ADDR;
+    struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
+
+    char name[18];
+    int index = 13;
+    for (int i = 0; i < 13; i++) {
+        if (cmdline[i] <= ' ') {
+            index = i;
+            break;
+        }
+        name[i] = cmdline[i];
+    }
+    name[index] = 0;
+
+    struct FILEINFO *finfo = file_search(name, (struct FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
+    if (!finfo && name[index - 1] != '.') {
+        /* hltコマンドでは見つからないので，hlt.binでは見つかるか探す*/
+        name[index]     = '.';
+        name[index + 1] = 'B';
+        name[index + 2] = 'I';
+        name[index + 3] = 'N';
+        name[index + 4] = '0';
+        finfo           = file_search(name, (struct FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
+    }
+
+    if (finfo) {
+        char *p = (char *)memman_alloc_4k(memman, finfo->size);
+        file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
+        set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER);
+        farcall(0, 1003 * 8);
+        memman_free_4k(memman, (int)p, finfo->size);
+        cons_newline(cons);
+        return 1;
+    }
+    /* ファイルが見つからない場合 */
+    return 0;
 }

@@ -30,11 +30,11 @@ bootpack.hrb : $(OBJ_ALL) har.ls Makefile
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
 
-haribote.img : ipl.bin hlt.bin haribote.sys Makefile
+haribote.img : ipl.bin hello.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
-	mcopy hlt.bin -i haribote.img ::
+	mcopy hello.bin -i haribote.img ::
 	mcopy ipl.asm -i haribote.img ::
 
 # コマンド

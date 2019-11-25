@@ -301,3 +301,9 @@ void bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     }
     return;
 }
+
+int inthandler0d(int *esp) {
+    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+    cons_putstr(cons, "\nINT 0d :\n General Prodtected Exception.\n");
+    return 1;
+}

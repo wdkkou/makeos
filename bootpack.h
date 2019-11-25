@@ -19,6 +19,7 @@ void load_idtr(int limit, int addr);
 int load_cr0(void);
 void store_cr0(int cr0);
 void load_tr(int tr);
+void asm_inthandler0d(void);
 void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
@@ -27,6 +28,7 @@ void asm_bin_api(void);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
 void farcall(int eip, int cs);
+void start_app(int eip, int cs, int esp, int ds);
 /* graphic.c */
 void init_palette(void);
 void init_screen(char *vram, int x, int y);

@@ -8,11 +8,11 @@
     GLOBAL  load_gdtr, load_idtr
     GLOBAL  load_cr0, store_cr0
     GLOBAL  load_tr
-    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20
+    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20,asm_inthandler0d
     GLOBAL  memtest_sub
     GLOBAL  farjmp, farcall
     GLOBAL  asm_bin_api, start_app
-    EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20
+    EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20 , inthandler0d
     EXTERN  bin_api
 
 bits 32
@@ -269,6 +269,64 @@ asm_inthandler2c:
         pop ds
         pop es
         iretd
+
+asm_inthandler0d:
+        sti
+        push es
+        push ds
+        pushad
+        mov ax, ss
+        cmp ax, 1*8
+        jne .from_app
+        ;osが動いている時に割り込まれたのでほぼ今までどおり
+        mov eax,esp
+        push ss
+        push eax
+        mov ax, ss
+        mov ds, ax
+        mov es,ax
+        call inthandler20
+        add esp, 8
+        popad
+        pop ds
+        pop es
+        iretd
+.from_app
+; アプリが動いている時に割り込まれた
+        cli
+        mov eax, 1*8
+        mov ds, ax
+        mov ecx, [0xfe4]
+        add ecx, -8
+        mov [ecx+4], ss
+        mov [ecx], esp
+        mov ss, ax
+        mov es, ax
+        mov esp, ecx
+        sti
+        call inthandler0d
+        cli
+        cmp eax, 0
+        jne .kill
+        pop ecx
+        pop eax
+        mov ss, ax
+        mov esp , ecx
+        popad
+        pop ds
+        pop es
+        iretd
+.kill:
+; アプリを異常終了させる
+        mov eax, 1*8
+        mov es, ax
+        mov ss, ax
+        mov ds, ax
+        mov fs, ax
+        mov gs, ax
+        mov esp, [0xfe4] ; start_appの時のespに無理やり戻す
+        popad ;保存しておいたレジスタを回復
+        ret
 
 memtest_sub:
         push edi

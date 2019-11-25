@@ -28,7 +28,7 @@ void asm_bin_api(void);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
 void farcall(int eip, int cs);
-void start_app(int eip, int cs, int esp, int ds);
+void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
 /* graphic.c */
 void init_palette(void);
 void init_screen(char *vram, int x, int y);
@@ -93,7 +93,7 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 #define AR_DATA32_RW 0x4092
 #define AR_CODE32_ER 0x409a
 #define AR_TSS32 0x0089
-#define AR_INTGATE32 0x0008e
+#define AR_INTGATE32 0x008e
 
 /* int.c */
 
@@ -271,7 +271,8 @@ void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 void cons_putstr(struct CONSOLE *cons, char *s);
 void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
-void bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
+int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
+int *inthandler0d(int *esp);
 
 /* file.c */
 struct FILEINFO {

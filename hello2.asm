@@ -1,4 +1,4 @@
-bits32
+bits 32
     mov edx, 2
     mov ebx, msg
     int 0x40

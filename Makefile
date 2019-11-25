@@ -18,6 +18,9 @@ all :
 nasmfunc.o : nasmfunc.asm Makefile
 	nasm -f elf nasmfunc.asm -o nasmfunc.o -l nasmfunc.lst
 
+a_nasm.o : a_nasm.asm Makefile
+	nasm -f elf a_nasm.asm -o a_nasm.o -l a_nasm.lst
+
 hankaku.c : hankaku.txt conv_hankaku
 	./conv_hankaku
 
@@ -30,12 +33,21 @@ bootpack.hrb : $(OBJ_ALL) har.ls Makefile
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
 
-haribote.img : ipl.bin hello.bin hello2.bin haribote.sys Makefile
+hello3.bin: hello3.o a_nasm.o api.ls
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o hello3.o -o hello3.bin
+
+crack1.bin: crack1.o api.ls
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o crack1.o -o crack1.bin
+
+haribote.img : ipl.bin hello.bin hello2.bin hello3.bin crack1.bin crack2.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
 	mcopy hello.bin -i haribote.img ::
 	mcopy hello2.bin -i haribote.img ::
+	mcopy hello3.bin -i haribote.img ::
+	mcopy crack1.bin -i haribote.img ::
+	mcopy crack2.bin -i haribote.img ::
 
 # コマンド
 

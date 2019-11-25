@@ -8,11 +8,11 @@
     GLOBAL  load_gdtr, load_idtr
     GLOBAL  load_cr0, store_cr0
     GLOBAL  load_tr
-    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20
+    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20,asm_inthandler0d
     GLOBAL  memtest_sub
     GLOBAL  farjmp, farcall
-    GLOBAL  asm_bin_api
-    EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20
+    GLOBAL  asm_bin_api, start_app
+    EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20 , inthandler0d
     EXTERN  bin_api
 
 bits 32
@@ -114,7 +114,7 @@ asm_inthandler20:
         push eax
         mov ax, ss
         mov ds, ax
-        mov es,ax
+        mov es, ax
         call inthandler20
         pop eax
         popad
@@ -130,7 +130,7 @@ asm_inthandler21:
         push eax
         mov ax, ss
         mov ds, ax
-        mov es,ax
+        mov es, ax
         call inthandler21
         pop eax
         popad
@@ -146,7 +146,7 @@ asm_inthandler27:
         push eax
         mov ax, ss
         mov ds, ax
-        mov es,ax
+        mov es, ax
         call inthandler27
         pop eax
         popad
@@ -162,12 +162,32 @@ asm_inthandler2c:
         push eax
         mov ax, ss
         mov ds, ax
-        mov es,ax
+        mov es, ax
         call inthandler2c
         pop eax
         popad
         pop ds
         pop es
+        iretd
+
+asm_inthandler0d:
+        sti
+        push es
+        push ds
+        pushad
+        mov eax, esp
+        push eax
+        mov ax, ss
+        mov ds, ax
+        mov es, ax
+        call inthandler0d
+        cmp eax, 0
+        jne end_app
+        pop eax
+        popad
+        pop ds
+        pop es
+        add esp, 4
         iretd
 
 memtest_sub:
@@ -213,9 +233,45 @@ farcall:
 
 asm_bin_api:
         sti
+        push ds
+        push es
         pushad ; 保存のためのpush
         pushad ; bin_apiに渡すためのpush
+        mov ax, ss
+        mov ds, ax
+        mov es, ax
         call bin_api
-        add  esp, 32
+        cmp eax, 0
+        jne end_app
+        add esp, 32
         popad
+        pop es
+        pop ds
         iretd
+end_app:
+; eaxはtss.esp0の番地
+        mov esp, [eax]
+        popad
+        ret ; cmd_appへ戻る
+start_app: ; void start_app(int eip,int cs,int esp,int ds, int *tss_esp0);
+        pushad
+        mov eax, [esp+36]
+        mov ecx, [esp+40]
+        mov edx, [esp+44]
+        mov ebx, [esp+48]
+        mov ebp, [esp+52]
+        mov [ebp], esp
+        mov [ebp+4], ss
+        mov es, bx
+        mov ds, bx
+        mov fs, bx
+        mov gs, bx
+; 以下　retfでアプリに行くためのスタック調整
+        or ecx, 3
+        or ebx, 3
+        push ebx
+        push edx
+        push ecx
+        push eax
+        retf
+; アプリが終了してもここには来ない

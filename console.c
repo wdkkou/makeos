@@ -280,7 +280,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
             start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
             memman_free_4k(memman, (int)q, segsiz);
         } else {
-            cons_putstr(cons, ".bin file format error\n");
+            cons_putstr(cons, ".bin file format error");
         }
         memman_free_4k(memman, (int)p, finfo->size);
         cons_newline(cons);

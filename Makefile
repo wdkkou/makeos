@@ -39,19 +39,24 @@ hello3.bin: hello3.o a_nasm.o api.ls
 hello4.bin: hello4.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o hello4.o -o hello4.bin
 
-bug1.bin: bug1.o a_nasm.o api.ls
-	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug1.o -o bug1.bin
+# asmファイルから指定のリンカスクリプトの設定にしたアプリを生成する方法
+hello5.bin: hello5.asm a_nasm.o api.ls
+	nasm -f elf hello5.asm -o hello5.o -l hello5.lst
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o hello5.o -o hello5.bin
 
-bug2.bin: bug2.o a_nasm.o api.ls
-	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug2.o -o bug2.bin
+# bug1.bin: bug1.o a_nasm.o api.ls
+# 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug1.o -o bug1.bin
 
-bug3.bin: bug3.o a_nasm.o api.ls
-	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug3.o -o bug3.bin
+# bug2.bin: bug2.o a_nasm.o api.ls
+# 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug2.o -o bug2.bin
 
-crack1.bin: crack1.o api.ls
-	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o crack1.o -o crack1.bin
+# bug3.bin: bug3.o a_nasm.o api.ls
+# 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug3.o -o bug3.bin
 
-haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin haribote.sys Makefile
+# crack1.bin: crack1.o api.ls
+# 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o crack1.o -o crack1.bin
+
+haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
@@ -59,6 +64,7 @@ haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin haribote.sys M
 	mcopy hello2.bin -i haribote.img ::
 	mcopy hello3.bin -i haribote.img ::
 	mcopy hello4.bin -i haribote.img ::
+	mcopy hello5.bin -i haribote.img ::
 
 # コマンド
 

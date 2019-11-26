@@ -242,7 +242,7 @@ void HariMain(void) {
                 if (i == 256 + 0x3b && key_shift != 0 && task_cons->tss.ss0 != 0) {
                     /* shift + f1 */
                     struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
-                    cons_putstr(cons, "Break\n");
+                    cons_putstr(cons, "\nBreak\n");
                     io_cli();
                     task_cons->tss.eax = (int)&(task_cons->tss.esp0);
                     task_cons->tss.eip = (int)asm_end_app;

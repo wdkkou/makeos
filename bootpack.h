@@ -231,7 +231,7 @@ struct TASK {
 struct TASKLEVEL {
     int running; /* 動作しているタスクの数 */
     int now;     /* 現在動作しているタスクがどれだか分かるようにするための変数 */
-    struct TASK *tasks[MAX_TASKS_LV]
+    struct TASK *tasks[MAX_TASKS_LV];
 };
 
 struct TASKCTL {

@@ -9,6 +9,7 @@
     GLOBAL  load_cr0, store_cr0
     GLOBAL  load_tr
     GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20,asm_inthandler0d, asm_inthandler0c
+    GLOBAL  asm_end_app
     GLOBAL  memtest_sub
     GLOBAL  farjmp, farcall
     GLOBAL  asm_bin_api, start_app
@@ -182,7 +183,7 @@ asm_inthandler0c:
         mov es, ax
         call inthandler0c
         cmp eax, 0
-        jne end_app
+        jne asm_end_app
         pop eax
         popad
         pop ds
@@ -202,7 +203,7 @@ asm_inthandler0d:
         mov es, ax
         call inthandler0d
         cmp eax, 0
-        jne end_app
+        jne asm_end_app
         pop eax
         popad
         pop ds
@@ -262,15 +263,16 @@ asm_bin_api:
         mov es, ax
         call bin_api
         cmp eax, 0
-        jne end_app
+        jne asm_end_app
         add esp, 32
         popad
         pop es
         pop ds
         iretd
-end_app:
+asm_end_app:
 ; eaxはtss.esp0の番地
         mov esp, [eax]
+        mov dword [eax+4],0
         popad
         ret ; cmd_appへ戻る
 start_app: ; void start_app(int eip,int cs,int esp,int ds, int *tss_esp0);

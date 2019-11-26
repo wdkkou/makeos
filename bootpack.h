@@ -30,6 +30,7 @@ unsigned int memtest_sub(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
 void farcall(int eip, int cs);
 void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
+void asm_end_app(void);
 /* graphic.c */
 void init_palette(void);
 void init_screen(char *vram, int x, int y);

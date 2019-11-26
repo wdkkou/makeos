@@ -239,13 +239,19 @@ void HariMain(void) {
                     fifo32_put(&keycmd, KEYCMD_LED);
                     fifo32_put(&keycmd, key_leds);
                 }
-                if (i ==
-                    256 + 0xfa) { /* キーボードがデータを無事に受け取った */
+                if (i == 256 + 0x3b && key_shift != 0 && task_cons->tss.ss0 != 0) {
+                    /* shift + f1 */
+                    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+                    cons_putstr(cons, "Break\n");
+                    io_cli();
+                    task_cons->tss.eax = (int)&(task_cons->tss.esp0);
+                    task_cons->tss.eip = (int)asm_end_app;
+                    io_sti();
+                }
+                if (i == 256 + 0xfa) { /* キーボードがデータを無事に受け取った */
                     keycmd_wait = -1;
                 }
-                if (i ==
-                    256 +
-                        0xfe) { /* キーボードがデータを無事に受け取れなかった */
+                if (i == 256 + 0xfe) { /* キーボードがデータを無事に受け取れなかった */
                     wait_KBC_sendready();
                     io_out8(PORT_KEYDAT, keycmd_wait);
                 }

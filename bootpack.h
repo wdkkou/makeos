@@ -19,6 +19,7 @@ void load_idtr(int limit, int addr);
 int load_cr0(void);
 void store_cr0(int cr0);
 void load_tr(int tr);
+void asm_inthandler0c(void);
 void asm_inthandler0d(void);
 void asm_inthandler20(void);
 void asm_inthandler21(void);
@@ -273,6 +274,7 @@ void cons_putstr(struct CONSOLE *cons, char *s);
 void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
 int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 int *inthandler0d(int *esp);
+int *inthandler0c(int *esp);
 
 /* file.c */
 struct FILEINFO {

@@ -305,6 +305,18 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     return 0;
 }
 
+int *inthandler0c(int *esp) {
+    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+    cons_putstr(cons, "INT 0c :\n Stack Exception.");
+
+    char s[30];
+    sprintf(s, "eip = %x\n", esp[11]);
+    cons_putstr(cons, s);
+
+    struct TASK *task = task_now();
+    return &(task->tss.esp0); /* 異常終了 */
+}
+
 int *inthandler0d(int *esp) {
     struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task    = task_now();

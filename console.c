@@ -263,24 +263,26 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
     }
 
     if (finfo) {
-        char *p         = (char *)memman_alloc_4k(memman, finfo->size);
-        char *q         = (char *)memman_alloc_4k(memman, 64 * 1024);
-        *((int *)0xfe8) = (int)p;
+        char *p = (char *)memman_alloc_4k(memman, finfo->size);
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
-        set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
-        set_segmdesc(gdt + 1004, 64 * 1024 - 1, (int)q, AR_DATA32_RW + 0x60);
-        if (finfo->size >= 8 && strncmp(p + 4, "Hari", 4) == 0) {
-            /* call 0x1b のアセンブル */
-            p[0] = 0xe8;
-            p[1] = 0x16;
-            p[2] = 0x00;
-            p[3] = 0x00;
-            p[4] = 0x00;
-            p[5] = 0xcb;
+        if (finfo->size >= 36 && strncmp(p + 4, "Hari", 4) == 0 && *p == 0x00) {
+            int segsiz      = *((int *)(p + 0x0000));
+            int esp         = *((int *)(p + 0x000c));
+            int datsiz      = *((int *)(p + 0x0010));
+            int datbin      = *((int *)(p + 0x0014));
+            char *q         = (char *)memman_alloc_4k(memman, segsiz);
+            *((int *)0xfe8) = (int)q;
+            set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
+            set_segmdesc(gdt + 1004, segsiz - 1, (int)q, AR_DATA32_RW + 0x60);
+            for (int i = 0; i < datsiz; i++) {
+                q[esp + i] = p[datbin + i];
+            }
+            start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+            memman_free_4k(memman, (int)q, segsiz);
+        } else {
+            cons_putstr(cons, ".bin file format error");
         }
-        start_app(0, 1003 * 8, 64 * 1024, 1004 * 8, &(task->tss.esp0));
         memman_free_4k(memman, (int)p, finfo->size);
-        memman_free_4k(memman, (int)q, 64 * 1024);
         cons_newline(cons);
         return 1;
     }
@@ -289,20 +291,49 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
 }
 
 int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax) {
-    int cs_base          = *((int *)0xfe8);
+    int ds_base          = *((int *)0xfe8);
     struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task    = task_now();
 
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
     } else if (edx == 2) {
-        cons_putstr(cons, (char *)ebx + cs_base);
+        cons_putstr(cons, (char *)ebx + ds_base);
     } else if (edx == 3) {
-        cons_putstr_len(cons, (char *)ebx + cs_base, ecx);
+        cons_putstr_len(cons, (char *)ebx + ds_base, ecx);
     } else if (edx == 4) {
         return &(task->tss.esp0);
+    } else if (edx == 5) {
+        int *reg              = &eax + 1; /* eaxの次の番地 */
+        struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
+        struct SHEET *sht     = sheet_alloc(shtctl);
+        sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
+        make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
+        sheet_slide(sht, 100, 50);
+        sheet_updown(sht, 3);
+        reg[7] = (int)sht;
+    } else if (edx == 6) {
+        struct SHEET *sht = (struct SHEET *)ebx;
+        putfont8_asc(sht->buf, sht->bxsize, esi, edi, eax, (char *)ebp + ds_base);
+        sheet_refresh(sht, esi, edi, esi + ecx * 8, edi + 16);
+    } else if (edx == 7) {
+        struct SHEET *sht = (struct SHEET *)ebx;
+        boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
+        sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
     }
     return 0;
+}
+
+int *inthandler0c(int *esp) {
+    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+    cons_putstr(cons, "INT 0c :\n Stack Exception.");
+
+    char s[30];
+    sprintf(s, "eip = %x\n", esp[11]);
+    cons_putstr(cons, s);
+
+    struct TASK *task = task_now();
+    return &(task->tss.esp0); /* 異常終了 */
 }
 
 int *inthandler0d(int *esp) {

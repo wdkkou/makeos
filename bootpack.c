@@ -67,6 +67,7 @@ void HariMain(void) {
     struct TASK *task_a = task_init(memman);
     fifo.task           = task_a;
     task_run(task_a, 1, 0);
+    *((int *)0x0fe4) = (int)shtctl;
 
     /* sht_back */
     struct SHEET *sht_back = sheet_alloc(shtctl);
@@ -239,13 +240,19 @@ void HariMain(void) {
                     fifo32_put(&keycmd, KEYCMD_LED);
                     fifo32_put(&keycmd, key_leds);
                 }
-                if (i ==
-                    256 + 0xfa) { /* キーボードがデータを無事に受け取った */
+                if (i == 256 + 0x3b && key_shift != 0 && task_cons->tss.ss0 != 0) {
+                    /* shift + f1 */
+                    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+                    cons_putstr(cons, "\nBreak\n");
+                    io_cli();
+                    task_cons->tss.eax = (int)&(task_cons->tss.esp0);
+                    task_cons->tss.eip = (int)asm_end_app;
+                    io_sti();
+                }
+                if (i == 256 + 0xfa) { /* キーボードがデータを無事に受け取った */
                     keycmd_wait = -1;
                 }
-                if (i ==
-                    256 +
-                        0xfe) { /* キーボードがデータを無事に受け取れなかった */
+                if (i == 256 + 0xfe) { /* キーボードがデータを無事に受け取れなかった */
                     wait_KBC_sendready();
                     io_out8(PORT_KEYDAT, keycmd_wait);
                 }

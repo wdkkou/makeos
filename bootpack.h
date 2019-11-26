@@ -19,6 +19,7 @@ void load_idtr(int limit, int addr);
 int load_cr0(void);
 void store_cr0(int cr0);
 void load_tr(int tr);
+void asm_inthandler0c(void);
 void asm_inthandler0d(void);
 void asm_inthandler20(void);
 void asm_inthandler21(void);
@@ -29,6 +30,7 @@ unsigned int memtest_sub(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
 void farcall(int eip, int cs);
 void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
+void asm_end_app(void);
 /* graphic.c */
 void init_palette(void);
 void init_screen(char *vram, int x, int y);
@@ -231,7 +233,7 @@ struct TASK {
 struct TASKLEVEL {
     int running; /* 動作しているタスクの数 */
     int now;     /* 現在動作しているタスクがどれだか分かるようにするための変数 */
-    struct TASK *tasks[MAX_TASKS_LV]
+    struct TASK *tasks[MAX_TASKS_LV];
 };
 
 struct TASKCTL {
@@ -273,6 +275,7 @@ void cons_putstr(struct CONSOLE *cons, char *s);
 void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
 int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 int *inthandler0d(int *esp);
+int *inthandler0c(int *esp);
 
 /* file.c */
 struct FILEINFO {

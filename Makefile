@@ -36,6 +36,9 @@ haribote.sys : asmhead.bin bootpack.hrb Makefile
 hello3.bin: hello3.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o hello3.o -o hello3.bin
 
+hello4.bin: hello4.o a_nasm.o api.ls
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o hello4.o -o hello4.bin
+
 bug1.bin: bug1.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug1.o -o bug1.bin
 
@@ -48,13 +51,14 @@ bug3.bin: bug3.o a_nasm.o api.ls
 crack1.bin: crack1.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o crack1.o -o crack1.bin
 
-haribote.img : ipl.bin hello.bin hello2.bin hello3.bin bug1.bin bug2.bin bug3.bin haribote.sys Makefile
+haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin bug1.bin bug2.bin bug3.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
 	mcopy hello.bin -i haribote.img ::
 	mcopy hello2.bin -i haribote.img ::
 	mcopy hello3.bin -i haribote.img ::
+	mcopy hello4.bin -i haribote.img ::
 	mcopy bug1.bin -i haribote.img ::
 	mcopy bug2.bin -i haribote.img ::
 	mcopy bug3.bin -i haribote.img ::

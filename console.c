@@ -294,6 +294,7 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     int ds_base          = *((int *)0xfe8);
     struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task    = task_now();
+    int *reg             = &eax + 1; /* eaxの次の番地 */
 
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
@@ -304,7 +305,6 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     } else if (edx == 4) {
         return &(task->tss.esp0);
     } else if (edx == 5) {
-        int *reg              = &eax + 1; /* eaxの次の番地 */
         struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
         struct SHEET *sht     = sheet_alloc(shtctl);
         sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
@@ -320,6 +320,16 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
         struct SHEET *sht = (struct SHEET *)ebx;
         boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
         sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
+    } else if (edx == 8) {
+        memman_init((struct MEMMAN *)(ebx + ds_base));
+        ecx &= 0xfffffff0;
+        memman_free((struct MEMMAN *)(ebx + ds_base), eax, ecx);
+    } else if (edx == 9) {
+        ecx    = (ecx + 0x0f) & 0xfffffff0;
+        reg[7] = memman_alloc((struct MEMMAN *)(ebx + ds_base), ecx);
+    } else if (edx == 10) {
+        ecx = (ecx * 0x0f) & 0xfffffff0;
+        memman_free((struct MEMMAN *)(ebx + ds_base), eax, ecx);
     }
     return 0;
 }

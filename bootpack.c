@@ -112,7 +112,7 @@ void HariMain(void) {
 
     sheet_slide(sht_back, 0, 0);
     sheet_slide(sht_cons, 32, 4);
-    sheet_slide(sht_window, 64, 150);
+    sheet_slide(sht_window, 64, 100);
     sheet_slide(sht_mouse, mx, my);
     sheet_updown(sht_back, 0);
     sheet_updown(sht_cons, 1);
@@ -123,6 +123,7 @@ void HariMain(void) {
     int key_to = 0, key_shift = 0;
     int key_leds    = (binfo->leds >> 4) & 7;
     int keycmd_wait = -1;
+    int mmx = -1, mmy = -1;
 
     /* 最初にキーボード状態との食い違いがないように、設定しておくことにする */
     struct FIFO32 keycmd;
@@ -288,20 +289,36 @@ void HariMain(void) {
                     struct SHEET *sht;
                     int x, y;
                     if ((mdec.btn & 0x01) != 0) {
-                        for (int j = shtctl->top - 1; j > 0; j--) {
-                            sht = shtctl->sheets[j];
-                            x   = mx - sht->vx0;
-                            y   = my - sht->vy0;
-                            if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize) {
-                                if (sht->buf[y * sht->bxsize + x] != sht->col_inv) {
-                                    sheet_updown(sht, shtctl->top - 1);
-                                    break;
+                        if (mmx < 0) {
+                            for (int j = shtctl->top - 1; j > 0; j--) {
+                                sht = shtctl->sheets[j];
+                                x   = mx - sht->vx0;
+                                y   = my - sht->vy0;
+                                if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize) {
+                                    if (sht->buf[y * sht->bxsize + x] != sht->col_inv) {
+                                        sheet_updown(sht, shtctl->top - 1);
+                                        if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21) {
+                                            mmx = mx;
+                                            mmy = my;
+                                        }
+                                        break;
+                                    }
                                 }
                             }
+                        } else {
+                            x = mx - mmx;
+                            y = my - mmy;
+                            sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
+                            mmx = mx;
+                            mmy = my;
                         }
-                        // sheet_slide(sht_window, mx - 80, my - 8);
+                    } else {
+                        mmx = -1;
                     }
                 }
+                /* なぜか，sht_backをrefreshしないと画面下の方でshtが残る */
+                sheet_refresh(sht_back, 0, 0, 1 * 8, 1);
+
             } else if (i == 1) {
                 timer_init(timer, &fifo, 0);
                 if (cursor_c >= 0) {

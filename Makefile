@@ -84,16 +84,6 @@ haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin \
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
-	mcopy hello.bin -i haribote.img ::
-	mcopy hello2.bin -i haribote.img ::
-	mcopy hello3.bin -i haribote.img ::
-	mcopy hello4.bin -i haribote.img ::
-	mcopy hello5.bin -i haribote.img ::
-	mcopy winhello.bin -i haribote.img ::
-	mcopy win2.bin -i haribote.img ::
-	mcopy win3.bin -i haribote.img ::
-	mcopy star.bin -i haribote.img ::
-	mcopy stars2.bin -i haribote.img ::
 	mcopy lines.bin -i haribote.img ::
 	mcopy walk.bin -i haribote.img ::
 

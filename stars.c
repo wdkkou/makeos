@@ -5,14 +5,28 @@ char *api_malloc(int size);
 void api_point(int win, int x, int y, int col);
 void api_end(void);
 
+unsigned long rand(void);
+
 void HariMain(void) {
     char *buf;
     int win;
 
     api_initmalloc();
-    buf = api_malloc(150 * 50);
-    win = api_openwin(buf, 150, 100, -1, "star");
+    buf = api_malloc(150 * 100);
+    win = api_openwin(buf, 150, 100, -1, "stars");
     api_boxfillwin(win, 6, 26, 143, 93, 0);
-    api_point(win, 75, 59, 3);
+    for (int i = 0; i < 50; i++) {
+        int x = (rand() % 137) + 6;
+        int y = (rand() % 67) + 26;
+        api_point(win, x, y, 3);
+    }
     api_end();
+}
+
+unsigned long rand(void) {
+    unsigned long rand;
+    rand *= 1234567;
+    rand += 1397;
+
+    return rand;
 }

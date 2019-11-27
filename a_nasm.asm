@@ -8,6 +8,7 @@ global api_point
 global api_initmalloc
 global api_malloc
 global api_free
+global api_refreshwin
 
 section .text
 
@@ -114,7 +115,7 @@ api_free: ; void api_free(char *addr,int size);
     pop ebx
     ret
 
-api_point:
+api_point: ; void api_point(int win, int x,int y, int col);
     push edi
     push esi
     push ebx
@@ -123,6 +124,22 @@ api_point:
     mov esi,[esp+20] ; x
     mov edi,[esp+24] ; y
     mov eax,[esp+28] ; col
+    int 0x40
+    pop ebx
+    pop esi
+    pop edi
+    ret
+
+api_refreshwin: ; void api_refreshwin(int win, int x0,int y0,int x1,int y1);
+    push edi
+    push esi
+    push ebx
+    mov edx, 12
+    mov ebx, [esp+16]
+    mov eax, [esp+20]
+    mov ecx, [esp+24]
+    mov esi, [esp+28]
+    mov edi, [esp+32]
     int 0x40
     pop ebx
     pop esi

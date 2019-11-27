@@ -241,7 +241,7 @@ void HariMain(void) {
                     fifo32_put(&keycmd, key_leds);
                 }
                 if (i == 256 + 0x2e && key_shift != 0 && task_cons->tss.ss0 != 0) {
-                    /* shift + f1 */
+                    /* shift + c */
                     struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
                     cons_putstr(cons, "\nBreak\n");
                     io_cli();

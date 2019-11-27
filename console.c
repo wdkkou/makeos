@@ -10,10 +10,6 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
 
     fifo32_init(&task->fifo, 128, fifobuf, task);
 
-    struct TIMER *timer = timer_alloc();
-    timer_init(timer, &task->fifo, 1);
-    timer_settime(timer, 50);
-
     int *fat = (int *)memman_alloc_4k(memman, 4 * 2880);
     file_readfat(fat, (unsigned char *)(ADR_DISKIMG + 0x000200));
 
@@ -24,6 +20,10 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
     cons.cur_y       = 28;
     cons.cur_c       = -1;
     *((int *)0x0fec) = (int)&cons;
+
+    struct TIMER *timer = timer_alloc();
+    timer_init(cons.timer, &task->fifo, 1);
+    timer_settime(cons.timer, 50);
 
     /* プロンプト表示 */
     cons_putstr(&cons, "$ ");
@@ -38,17 +38,17 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
             io_sti();
             if (data <= 1) {
                 if (data != 0) {
-                    timer_init(timer, &task->fifo, 0);
+                    timer_init(cons.timer, &task->fifo, 0);
                     if (cons.cur_c >= 0) {
                         cons.cur_c = WHITE;
                     }
                 } else {
-                    timer_init(timer, &task->fifo, 1);
+                    timer_init(cons.timer, &task->fifo, 1);
                     if (cons.cur_c >= 0) {
                         cons.cur_c = BLACK;
                     }
                 }
-                timer_settime(timer, 50);
+                timer_settime(cons.timer, 50);
             }
             if (data == 2) /* カーソルon */
             {
@@ -351,6 +351,35 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
         }
     } else if (edx == 14) {
         sheet_free((struct SHEET *)ebx);
+    } else if (edx == 15) {
+        while (1) {
+            io_cli();
+            if (fifo32_status(&task->fifo) == 0) {
+                if (eax != 0) {
+                    task_sleep(task);
+                } else {
+                    io_sti();
+                    reg[7] = -1;
+                    return 0;
+                }
+            }
+            int data = fifo32_get(&task->fifo);
+            io_sti();
+            if (data <= 1) {
+                timer_init(cons->timer, &task->fifo, 1);
+                timer_settime(cons->timer, 50);
+            }
+            if (data == 2) {
+                cons->cur_c = WHITE;
+            }
+            if (data == 3) {
+                cons->cur_c = -1;
+            }
+            if (256 <= data && data <= 511) {
+                reg[7] = data - 256;
+                return 0;
+            }
+        }
     }
     return 0;
 }

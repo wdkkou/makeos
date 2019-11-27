@@ -278,6 +278,14 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
                 q[esp + i] = p[datbin + i];
             }
             start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+            struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
+            for (int i = 0; i < MAX_SHEETS; i++) {
+                struct SHEET *sht = &(shtctl->sheets0[i]);
+                if (sht->flags != 0 && sht->task == task) {
+                    /*アプリが開きっぱなしになった下敷きを発見*/
+                    sheet_free(sht); /* 閉じる */
+                }
+            }
             memman_free_4k(memman, (int)q, segsiz);
         } else {
             cons_putstr(cons, ".bin file format error");
@@ -307,6 +315,7 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     } else if (edx == 5) {
         struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
         struct SHEET *sht     = sheet_alloc(shtctl);
+        sht->task             = task;
         sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
         make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
         sheet_slide(sht, 100, 50);

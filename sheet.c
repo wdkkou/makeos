@@ -29,6 +29,7 @@ struct SHEET *sheet_alloc(struct SHTCTL *ctl) {
             struct SHEET *sht = &ctl->sheets0[i];
             sht->flags        = SHEET_USE;
             sht->height       = -1;
+            sht->task         = 0;
             return sht;
         }
     }

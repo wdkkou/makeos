@@ -10,10 +10,6 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
 
     fifo32_init(&task->fifo, 128, fifobuf, task);
 
-    struct TIMER *timer = timer_alloc();
-    timer_init(timer, &task->fifo, 1);
-    timer_settime(timer, 50);
-
     int *fat = (int *)memman_alloc_4k(memman, 4 * 2880);
     file_readfat(fat, (unsigned char *)(ADR_DISKIMG + 0x000200));
 
@@ -24,6 +20,10 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
     cons.cur_y       = 28;
     cons.cur_c       = -1;
     *((int *)0x0fec) = (int)&cons;
+
+    struct TIMER *timer = timer_alloc();
+    timer_init(cons.timer, &task->fifo, 1);
+    timer_settime(cons.timer, 50);
 
     /* プロンプト表示 */
     cons_putstr(&cons, "$ ");
@@ -38,17 +38,17 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
             io_sti();
             if (data <= 1) {
                 if (data != 0) {
-                    timer_init(timer, &task->fifo, 0);
+                    timer_init(cons.timer, &task->fifo, 0);
                     if (cons.cur_c >= 0) {
                         cons.cur_c = WHITE;
                     }
                 } else {
-                    timer_init(timer, &task->fifo, 1);
+                    timer_init(cons.timer, &task->fifo, 1);
                     if (cons.cur_c >= 0) {
                         cons.cur_c = BLACK;
                     }
                 }
-                timer_settime(timer, 50);
+                timer_settime(cons.timer, 50);
             }
             if (data == 2) /* カーソルon */
             {
@@ -278,6 +278,14 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
                 q[esp + i] = p[datbin + i];
             }
             start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+            struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
+            for (int i = 0; i < MAX_SHEETS; i++) {
+                struct SHEET *sht = &(shtctl->sheets0[i]);
+                if (sht->flags != 0 && sht->task == task) {
+                    /*アプリが開きっぱなしになった下敷きを発見*/
+                    sheet_free(sht); /* 閉じる */
+                }
+            }
             memman_free_4k(memman, (int)q, segsiz);
         } else {
             cons_putstr(cons, ".bin file format error");
@@ -294,6 +302,7 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     int ds_base          = *((int *)0xfe8);
     struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task    = task_now();
+    int *reg             = &eax + 1; /* eaxの次の番地 */
 
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
@@ -304,22 +313,82 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     } else if (edx == 4) {
         return &(task->tss.esp0);
     } else if (edx == 5) {
-        int *reg              = &eax + 1; /* eaxの次の番地 */
         struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
         struct SHEET *sht     = sheet_alloc(shtctl);
+        sht->task             = task;
         sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
         make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
         sheet_slide(sht, 100, 50);
         sheet_updown(sht, 3);
         reg[7] = (int)sht;
     } else if (edx == 6) {
-        struct SHEET *sht = (struct SHEET *)ebx;
+        struct SHEET *sht = (struct SHEET *)(ebx & 0xfffffffe);
         putfont8_asc(sht->buf, sht->bxsize, esi, edi, eax, (char *)ebp + ds_base);
-        sheet_refresh(sht, esi, edi, esi + ecx * 8, edi + 16);
+        if ((ebx & 1) == 0) {
+            sheet_refresh(sht, esi, edi, esi + ecx * 8, edi + 16);
+        }
     } else if (edx == 7) {
-        struct SHEET *sht = (struct SHEET *)ebx;
+        struct SHEET *sht = (struct SHEET *)(ebx & 0xfffffffe);
         boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
-        sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
+        if ((ebx & 1) == 1) {
+            sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
+        }
+    } else if (edx == 8) {
+        memman_init((struct MEMMAN *)(ebx + ds_base));
+        ecx &= 0xfffffff0;
+        memman_free((struct MEMMAN *)(ebx + ds_base), eax, ecx);
+    } else if (edx == 9) {
+        ecx    = (ecx + 0x0f) & 0xfffffff0;
+        reg[7] = memman_alloc((struct MEMMAN *)(ebx + ds_base), ecx);
+    } else if (edx == 10) {
+        ecx = (ecx * 0x0f) & 0xfffffff0;
+        memman_free((struct MEMMAN *)(ebx + ds_base), eax, ecx);
+    } else if (edx == 11) {
+        struct SHEET *sht                 = (struct SHEET *)(ebx & 0xfffffffe);
+        sht->buf[sht->bxsize * edi + esi] = eax;
+        if ((ebx & 1) == 0) {
+            sheet_refresh(sht, esi, edi, esi + 1, edi + 1);
+        }
+    } else if (edx == 12) {
+        struct SHEET *sht = (struct SHEET *)ebx;
+        sheet_refresh(sht, eax, ecx, esi, edi);
+    } else if (edx == 13) {
+        struct SHEET *sht = (struct SHEET *)(ebx & 0xfffffffe);
+        bin_api_linewin(sht, eax, ecx, esi, edi, ebp);
+        if ((ebx & 1) == 0) {
+            sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
+        }
+    } else if (edx == 14) {
+        sheet_free((struct SHEET *)ebx);
+    } else if (edx == 15) {
+        while (1) {
+            io_cli();
+            if (fifo32_status(&task->fifo) == 0) {
+                if (eax != 0) {
+                    task_sleep(task);
+                } else {
+                    io_sti();
+                    reg[7] = -1;
+                    return 0;
+                }
+            }
+            int data = fifo32_get(&task->fifo);
+            io_sti();
+            if (data <= 1) {
+                timer_init(cons->timer, &task->fifo, 1);
+                timer_settime(cons->timer, 50);
+            }
+            if (data == 2) {
+                cons->cur_c = WHITE;
+            }
+            if (data == 3) {
+                cons->cur_c = -1;
+            }
+            if (256 <= data && data <= 511) {
+                reg[7] = data - 256;
+                return 0;
+            }
+        }
     }
     return 0;
 }
@@ -341,4 +410,51 @@ int *inthandler0d(int *esp) {
     struct TASK *task    = task_now();
     cons_putstr(cons, "INT 0d :\n General Prodtected Exception.");
     return &(task->tss.esp0); /* 異常終了させる */
+}
+
+void bin_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col) {
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    int x  = x0 << 10;
+    int y  = y0 << 10;
+
+    if (dx < 0) {
+        dx = -dx;
+    }
+    if (dy < 0) {
+        dy = -dy;
+    }
+
+    int len;
+    if (dx >= dy) {
+        len = dx + 1;
+        if (x0 > x1) {
+            dx = -1024;
+        } else {
+            dx = 1024;
+        }
+        if (y0 <= y1) {
+            dy = ((y1 - y0 + 1) << 10) / len;
+        } else {
+            dy = ((y1 - y0 - 1) << 10) / len;
+        }
+    } else {
+        len = dy + 1;
+        if (y0 > y1) {
+            dy = -1024;
+        } else {
+            dy = 1024;
+        }
+        if (x0 <= x1) {
+            dx = ((x1 - x0 + 1) << 10) / len;
+        } else {
+            dx = ((x1 - x0 - 1) << 10) / len;
+        }
+    }
+
+    for (int i = 0; i < len; i++) {
+        sht->buf[(y >> 10) * sht->bxsize + (x >> 10)] = col;
+        x += dx;
+        y += dy;
+    }
 }

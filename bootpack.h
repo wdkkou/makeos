@@ -169,6 +169,7 @@ struct SHEET {
     unsigned char *buf;
     int bxsize, bysize, vx0, vy0, col_inv, height, flags;
     struct SHTCTL *ctl;
+    struct TASK *task;
 };
 
 struct SHTCTL {
@@ -261,6 +262,7 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 struct CONSOLE {
     struct SHEET *sht;
     int cur_x, cur_y, cur_c;
+    struct TIMER *timer;
 };
 void console_task(struct SHEET *sheet, unsigned int memtotal);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);

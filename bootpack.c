@@ -284,10 +284,22 @@ void HariMain(void) {
                     if (my > binfo->scrny - 1) {
                         my = binfo->scrny - 1;
                     }
-                    putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 17);
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
+                    struct SHEET *sht;
+                    int x, y;
                     if ((mdec.btn & 0x01) != 0) {
-                        sheet_slide(sht_window, mx - 80, my - 8);
+                        for (int j = shtctl->top - 1; j > 0; j--) {
+                            sht = shtctl->sheets[j];
+                            x   = mx - sht->vx0;
+                            y   = my - sht->vy0;
+                            if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize) {
+                                if (sht->buf[y * sht->bxsize + x] != sht->col_inv) {
+                                    sheet_updown(sht, shtctl->top - 1);
+                                    break;
+                                }
+                            }
+                        }
+                        // sheet_slide(sht_window, mx - 80, my - 8);
                     }
                 }
             } else if (i == 1) {

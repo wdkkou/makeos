@@ -112,7 +112,7 @@ void HariMain(void) {
 
     sheet_slide(sht_back, 0, 0);
     sheet_slide(sht_cons, 32, 4);
-    sheet_slide(sht_window, 64, 100);
+    sheet_slide(sht_window, 150, 130);
     sheet_slide(sht_mouse, mx, my);
     sheet_updown(sht_back, 0);
     sheet_updown(sht_cons, 1);
@@ -300,6 +300,17 @@ void HariMain(void) {
                                         if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21) {
                                             mmx = mx;
                                             mmy = my;
+                                        }
+                                        if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19) {
+                                            /* ✕をクリック*/
+                                            if (sht->task != 0) {
+                                                struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+                                                cons_putstr(cons, "Break\n");
+                                                io_cli();
+                                                task_cons->tss.eax = (int)&(task_cons->tss.esp0);
+                                                task_cons->tss.eip = (int)asm_end_app;
+                                                io_sti();
+                                            }
                                         }
                                         break;
                                     }

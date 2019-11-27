@@ -53,6 +53,9 @@ win2.bin: winhello2.o a_nasm.o api.ls
 win3.bin: winhello3.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o winhello3.o -o win3.bin
 
+star1.bin: star1.o a_nasm.o api.ls
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o star1.o -o star1.bin
+
 # bug1.bin: bug1.o a_nasm.o api.ls
 # 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug1.o -o bug1.bin
 
@@ -66,7 +69,7 @@ win3.bin: winhello3.o a_nasm.o api.ls
 # 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o crack1.o -o crack1.bin
 
 haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin \
-									winhello.bin win2.bin win3.bin haribote.sys Makefile
+									winhello.bin win2.bin win3.bin star1.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
@@ -78,6 +81,7 @@ haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin \
 	mcopy winhello.bin -i haribote.img ::
 	mcopy win2.bin -i haribote.img ::
 	mcopy win3.bin -i haribote.img ::
+	mcopy star1.bin -i haribote.img ::
 
 # コマンド
 

@@ -4,6 +4,7 @@ global api_end
 global api_openwin
 global api_putstrwin
 global api_boxfillwin
+global api_point
 global api_initmalloc
 global api_malloc
 global api_free
@@ -111,4 +112,19 @@ api_free: ; void api_free(char *addr,int size);
     mov ecx, [esp+12] ; size
     int 0x40
     pop ebx
+    ret
+
+api_point:
+    push edi
+    push esi
+    push ebx
+    mov edx, 11
+    mov ebx,[esp+16] ; win
+    mov esi,[esp+20] ; x
+    mov edi,[esp+24] ; y
+    mov eax,[esp+28] ; col
+    int 0x40
+    pop ebx
+    pop esi
+    pop edi
     ret

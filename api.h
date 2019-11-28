@@ -16,6 +16,7 @@ int api_alloctimer(void);
 void api_inittimer(int timer, int data);
 void api_settimer(int timer, int time);
 void api_end(void);
+void api_beep(int tone);
 
 /* mystrcmp.c */
 int strcmp(char *str1, char *str2);

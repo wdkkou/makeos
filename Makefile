@@ -67,6 +67,10 @@ lines.bin: line.o a_nasm.o api.ls
 
 walk.bin: walk.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o walk.o -o walk.bin
+
+noodle.bin: noodle.o a_nasm.o api.ls mysprintf.o
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o mysprintf.o noodle.o -o noodle.bin
+
 # bug1.bin: bug1.o a_nasm.o api.ls
 # 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug1.o -o bug1.bin
 
@@ -80,22 +84,13 @@ walk.bin: walk.o a_nasm.o api.ls
 # 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o crack1.o -o crack1.bin
 
 haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin \
-			winhello.bin win2.bin win3.bin star.bin stars2.bin lines.bin walk.bin haribote.sys Makefile
+			winhello.bin win2.bin win3.bin star.bin stars2.bin lines.bin walk.bin noodle.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
-	mcopy hello.bin -i haribote.img ::
-	mcopy hello2.bin -i haribote.img ::
-	mcopy hello3.bin -i haribote.img ::
-	mcopy hello4.bin -i haribote.img ::
-	mcopy hello5.bin -i haribote.img ::
-	mcopy winhello.bin -i haribote.img ::
-	mcopy win2.bin -i haribote.img ::
-	mcopy win3.bin -i haribote.img ::
-	mcopy star.bin -i haribote.img ::
-	mcopy stars2.bin -i haribote.img ::
 	mcopy lines.bin -i haribote.img ::
 	mcopy walk.bin -i haribote.img ::
+	mcopy noodle.bin -i haribote.img ::
 
 # コマンド
 

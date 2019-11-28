@@ -2,6 +2,9 @@
 
 #define KEYCMD_LED 0xed
 
+int keywin_off(struct SHEET *key_win, struct SHEET *sht_win, int cur_c, int cur_x);
+int keywin_on(struct SHEET *key_win, struct SHEET *sht_win, int cur_c);
+
 void HariMain(void) {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
     char s[40];
@@ -112,7 +115,7 @@ void HariMain(void) {
 
     sheet_slide(sht_back, 0, 0);
     sheet_slide(sht_cons, 32, 4);
-    sheet_slide(sht_window, 64, 150);
+    sheet_slide(sht_window, 150, 130);
     sheet_slide(sht_mouse, mx, my);
     sheet_updown(sht_back, 0);
     sheet_updown(sht_cons, 1);
@@ -120,9 +123,13 @@ void HariMain(void) {
     sheet_updown(sht_mouse, 3);
 
     int i;
-    int key_to = 0, key_shift = 0;
+    int key_shift   = 0;
     int key_leds    = (binfo->leds >> 4) & 7;
     int keycmd_wait = -1;
+    int mmx = -1, mmy = -1;
+    struct SHEET *key_win = sht_window;
+    sht_cons->task        = task_cons;
+    sht_cons->flags |= 0x20;
 
     /* 最初にキーボード状態との食い違いがないように、設定しておくことにする */
     struct FIFO32 keycmd;
@@ -143,6 +150,11 @@ void HariMain(void) {
         } else {
             i = fifo32_get(&fifo);
             io_sti();
+            if (key_win->flags == 0) {
+                /* windowが閉じられた */
+                key_win  = shtctl->sheets[shtctl->top - 1];
+                cursor_c = keywin_on(key_win, sht_window, cursor_c);
+            }
             /* キーボードデータ */
             if (256 <= i && i < 512) {
                 if (i < 0x80 + 256) /* キーコードを文字コードに変換 */
@@ -162,8 +174,7 @@ void HariMain(void) {
                     }
                 }
                 if (s[0] != 0) {
-                    if (key_to == 0) /* タスクA */
-                    {
+                    if (key_win == sht_window) { /* タスクA */
                         /*　1文字表示してからカーソルを1つすすめる */
                         if (cursor_x < 128) {
                             s[1] = 0;
@@ -171,47 +182,37 @@ void HariMain(void) {
                             cursor_x += 8;
                         }
                     } else {
-                        fifo32_put(&task_cons->fifo, s[0] + 256);
+                        fifo32_put(&key_win->task->fifo, s[0] + 256);
                     }
                 }
                 /*バックスペース*/
                 if (i == 256 + 0x0e) /* バックスペース */
                 {
-                    if (key_to == 0) {
+                    if (key_win == sht_window) {
                         if (cursor_x > 8) {
-                            /* カーソルをスペースで消して，カーソル位置を1つ戻す
-                             */
+                            /* カーソルをスペースで消して，カーソル位置を1つ戻す */
                             putfont8_asc_sht(sht_window, cursor_x, 28, BLACK, WHITE, " ", 1);
                             cursor_x -= 8;
                         }
                     } else {
-                        fifo32_put(&task_cons->fifo, 8 + 256);
+                        fifo32_put(&key_win->task->fifo, 8 + 256);
                     }
                 }
                 if (i == 256 + 0x1c) /* Enter */
                 {
-                    if (key_to != 0) {
-                        fifo32_put(&task_cons->fifo, 10 + 256);
+                    if (key_win != sht_window) {
+                        fifo32_put(&key_win->task->fifo, 10 + 256);
                     }
                 }
                 /* tab */
                 if (i == 256 + 0x0f) {
-                    if (key_to == 0) {
-                        key_to = 1;
-                        make_wtitle8(buf_win, sht_window->bxsize, "task_a", 0);
-                        make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
-                        cursor_c = -1; /* カーソルを消す*/
-                        boxfill8(sht_window->buf, sht_window->bxsize, WHITE, cursor_x, 28, cursor_x + 7, 43);
-                        fifo32_put(&task_cons->fifo, 2); /*コンソールのカーソルON*/
-                    } else {
-                        key_to = 0;
-                        make_wtitle8(buf_win, sht_window->bxsize, "task_a", 1);
-                        make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
-                        cursor_c = BLACK;                /* カーソルを出す*/
-                        fifo32_put(&task_cons->fifo, 3); /*コンソールのカーソルOFF*/
+                    cursor_c   = keywin_off(key_win, sht_window, cursor_c, cursor_x);
+                    int height = key_win->height - 1;
+                    if (height == 0) {
+                        height = shtctl->top - 1;
                     }
-                    sheet_refresh(sht_window, 0, 0, sht_window->bxsize, 21);
-                    sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
+                    key_win  = shtctl->sheets[height];
+                    cursor_c = keywin_on(key_win, sht_window, cursor_c);
                 }
                 if (i == 256 + 0x2a) { /* 左シフト　on */
                     key_shift |= 1;
@@ -249,6 +250,9 @@ void HariMain(void) {
                     task_cons->tss.eip = (int)asm_end_app;
                     io_sti();
                 }
+                if (i == 256 + 0x57 && shtctl->top > 2) {
+                    sheet_updown(shtctl->sheets[1], shtctl->top - 1);
+                }
                 if (i == 256 + 0xfa) { /* キーボードがデータを無事に受け取った */
                     keycmd_wait = -1;
                 }
@@ -281,12 +285,56 @@ void HariMain(void) {
                     if (my > binfo->scrny - 1) {
                         my = binfo->scrny - 1;
                     }
-                    putfont8_asc_sht(sht_back, 0, 0, WHITE, COL8_008400, s, 17);
                     sheet_slide(sht_mouse, mx, my); /* refresh 含む */
+                    struct SHEET *sht;
+                    int x, y;
                     if ((mdec.btn & 0x01) != 0) {
-                        sheet_slide(sht_window, mx - 80, my - 8);
+                        if (mmx < 0) {
+                            for (int j = shtctl->top - 1; j > 0; j--) {
+                                sht = shtctl->sheets[j];
+                                x   = mx - sht->vx0;
+                                y   = my - sht->vy0;
+                                if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize) {
+                                    if (sht->buf[y * sht->bxsize + x] != sht->col_inv) {
+                                        sheet_updown(sht, shtctl->top - 1);
+                                        if (sht != key_win) {
+                                            cursor_c = keywin_off(key_win, sht_window, cursor_c, cursor_x);
+                                            key_win  = sht;
+                                            cursor_c = keywin_on(key_win, sht_window, cursor_c);
+                                        }
+                                        if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21) {
+                                            mmx = mx;
+                                            mmy = my;
+                                        }
+                                        if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19) {
+                                            /* ✕をクリック*/
+                                            if ((sht->flags & 0x10) != 0) {
+                                                struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+                                                cons_putstr(cons, "Break\n");
+                                                io_cli();
+                                                task_cons->tss.eax = (int)&(task_cons->tss.esp0);
+                                                task_cons->tss.eip = (int)asm_end_app;
+                                                io_sti();
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            x = mx - mmx;
+                            y = my - mmy;
+                            sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
+                            mmx = mx;
+                            mmy = my;
+                        }
+                    } else {
+                        mmx = -1;
                     }
                 }
+                /* なぜか，sht_backをrefreshしないと画面下の方でshtが残る */
+                sheet_refresh(sht_back, 0, 0, 1 * 8, 1);
+
             } else if (i == 1) {
                 timer_init(timer, &fifo, 0);
                 if (cursor_c >= 0) {
@@ -312,4 +360,29 @@ void HariMain(void) {
             }
         }
     }
+}
+
+int keywin_off(struct SHEET *key_win, struct SHEET *sht_window, int cur_c, int cur_x) {
+    change_wtitle8(key_win, 0);
+    if (key_win == sht_window) {
+        cur_c = -1;
+        boxfill8(sht_window->buf, sht_window->bxsize, WHITE, cur_x, 28, cur_x + 7, 43);
+    } else {
+        if ((key_win->flags & 0x20) != 0) {
+            fifo32_put(&key_win->task->fifo, 3);
+        }
+    }
+    return cur_c;
+}
+
+int keywin_on(struct SHEET *key_win, struct SHEET *sht_window, int cur_c) {
+    change_wtitle8(key_win, 1);
+    if (key_win == sht_window) {
+        cur_c = BLACK;
+    } else {
+        if ((key_win->flags & 0x20) != 0) {
+            fifo32_put(&key_win->task->fifo, 2);
+        }
+    }
+    return cur_c;
 }

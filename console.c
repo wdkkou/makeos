@@ -281,11 +281,12 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
             struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
             for (int i = 0; i < MAX_SHEETS; i++) {
                 struct SHEET *sht = &(shtctl->sheets0[i]);
-                if (sht->flags != 0 && sht->task == task) {
+                if ((sht->flags & 0x11) == 0x11 && sht->task == task) {
                     /*アプリが開きっぱなしになった下敷きを発見*/
                     sheet_free(sht); /* 閉じる */
                 }
             }
+            timer_cancelall(&task->fifo);
             memman_free_4k(memman, (int)q, segsiz);
         } else {
             cons_putstr(cons, ".bin file format error");
@@ -316,6 +317,7 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
         struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
         struct SHEET *sht     = sheet_alloc(shtctl);
         sht->task             = task;
+        sht->flags |= 0x10;
         sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
         make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
         sheet_slide(sht, 100, 50);
@@ -389,7 +391,17 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
                 return 0;
             }
         }
+    } else if (edx == 16) {
+        reg[7]                           = (int)timer_alloc();
+        ((struct TIMER *)reg[7])->flags2 = 1; /* 自動キャンセル有効 */
+    } else if (edx == 17) {
+        timer_init((struct TIMER *)ebx, &task->fifo, eax + 256);
+    } else if (edx == 18) {
+        timer_settime((struct TIMER *)ebx, eax);
+    } else if (edx == 19) {
+        timer_free((struct TIMER *)ebx);
     }
+
     return 0;
 }
 

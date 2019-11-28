@@ -31,7 +31,8 @@ void init_pit(void) {
 struct TIMER *timer_alloc(void) {
     for (int i = 0; i < MAX_TIMES; i++) {
         if (timerctl.timers0[i].flags == 0) {
-            timerctl.timers0[i].flags = TIMER_FLAGS_ALLOC;
+            timerctl.timers0[i].flags  = TIMER_FLAGS_ALLOC;
+            timerctl.timers0[i].flags2 = 0;
             return &timerctl.timers0[i];
         }
     }
@@ -114,5 +115,47 @@ void inthandler20(int *esp) {
         task_switch();
     }
 
+    return;
+}
+
+int timer_cancel(struct TIMER *timer) {
+    struct TIMER *t;
+    int e = io_load_eflags();
+    io_cli();
+    if (timer->flags == TIMER_FLAGS_USING) {
+        if (timer == timerctl.t0) {
+            t             = timer->next;
+            timerctl.t0   = t;
+            timerctl.next = t->timeout;
+        } else {
+            t = timerctl.t0;
+            while (1) {
+                if (t->next == timer) {
+                    break;
+                }
+                t = t->next;
+            }
+            t->next = timer->next;
+        }
+        timer->flags = TIMER_FLAGS_ALLOC;
+        io_store_eflags(e);
+        return 1;
+    }
+    io_store_eflags(e);
+    return 0;
+}
+
+void timer_cancelall(struct FIFO32 *fifo) {
+    struct TIMER *t;
+    int e = io_load_eflags();
+    io_cli();
+    for (int i = 0; i < MAX_TIMES; i++) {
+        t = &timerctl.timers0[i];
+        if (t->flags != 0 && t->flags2 != 0 && t->fifo == fifo) {
+            timer_cancel(t);
+            timer_free(t);
+        }
+    }
+    io_store_eflags(e);
     return;
 }

@@ -211,7 +211,7 @@ api_settimer:
 
 api_freetimer:
     push ebx
-    mov ebx, 19
+    mov edx, 19
     mov ebx,[esp+8]
     int 0x40
     pop ebx

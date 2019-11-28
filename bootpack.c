@@ -123,7 +123,7 @@ void HariMain(void) {
     sheet_updown(sht_mouse, 3);
 
     int i;
-    int key_to = 0, key_shift = 0;
+    int key_shift   = 0;
     int key_leds    = (binfo->leds >> 4) & 7;
     int keycmd_wait = -1;
     int mmx = -1, mmy = -1;
@@ -174,7 +174,6 @@ void HariMain(void) {
                     }
                 }
                 if (s[0] != 0) {
-                    // if (key_to == 0) /* タスクA */
                     if (key_win == sht_window) { /* タスクA */
                         /*　1文字表示してからカーソルを1つすすめる */
                         if (cursor_x < 128) {
@@ -183,7 +182,7 @@ void HariMain(void) {
                             cursor_x += 8;
                         }
                     } else {
-                        fifo32_put(&task_cons->fifo, s[0] + 256);
+                        fifo32_put(&key_win->task->fifo, s[0] + 256);
                     }
                 }
                 /*バックスペース*/
@@ -196,13 +195,13 @@ void HariMain(void) {
                             cursor_x -= 8;
                         }
                     } else {
-                        fifo32_put(&task_cons->fifo, 8 + 256);
+                        fifo32_put(&key_win->task->fifo, 8 + 256);
                     }
                 }
                 if (i == 256 + 0x1c) /* Enter */
                 {
                     if (key_win != sht_window) {
-                        fifo32_put(&task_cons->fifo, 10 + 256);
+                        fifo32_put(&key_win->task->fifo, 10 + 256);
                     }
                 }
                 /* tab */

@@ -77,6 +77,9 @@ beepup.bin: beepup.o a_nasm.o api.ls
 color.bin: color.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o color.o -o color.bin
 
+color2.bin: color2.o a_nasm.o api.ls
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o color2.o -o color2.bin
+
 # bug1.bin: bug1.o a_nasm.o api.ls
 # 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o bug1.o -o bug1.bin
 
@@ -91,7 +94,7 @@ color.bin: color.o a_nasm.o api.ls
 
 haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin \
 			winhello.bin win2.bin win3.bin star.bin stars2.bin lines.bin walk.bin \
-			noodle.bin beepup.bin color.bin haribote.sys Makefile
+			noodle.bin beepup.bin color.bin color2.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
@@ -100,6 +103,7 @@ haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin \
 	mcopy noodle.bin -i haribote.img ::
 	mcopy beepup.bin -i haribote.img ::
 	mcopy color.bin -i haribote.img ::
+	mcopy color2.bin -i haribote.img ::
 
 # コマンド
 

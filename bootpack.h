@@ -282,6 +282,7 @@ void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
 int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 int *inthandler0d(int *esp);
 int *inthandler0c(int *esp);
+void bin_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 
 /* file.c */
 struct FILEINFO {

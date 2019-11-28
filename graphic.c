@@ -20,6 +20,17 @@ void init_palette(void) {
         0x84, 0x84, 0x84,  // 848484 : 15: 暗い灰色
     };
     set_palette(0, 15, table_rgb);
+    unsigned char table2[216 * 3];
+    for (int b = 0; b < 6; b++) {
+        for (int g = 0; g < 6; g++) {
+            for (int r = 0; r < 6; r++) {
+                table2[(r + g * 6 + b * 36) * 3 + 0] = r * 51;
+                table2[(r + g * 6 + b * 36) * 3 + 1] = g * 51;
+                table2[(r + g * 6 + b * 36) * 3 + 2] = b * 51;
+            }
+        }
+    }
+    set_palette(16, 231, table2);
     return;
 }
 void set_palette(int start, int end, unsigned char *rgb) {

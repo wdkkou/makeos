@@ -1,13 +1,11 @@
 #include "bootpack.h"
 
 void console_task(struct SHEET *sheet, unsigned int memtotal) {
-    struct FIFO32 fifo;
-    int fifobuf[128];
     struct TASK *task              = task_now();
     struct MEMMAN *memman          = (struct MEMMAN *)MEM_ADDR;
-    struct FILEINFO *finfo         = (struct FILEINFO *)(ADR_DISKIMG + 0x002600);
     struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
 
+    int fifobuf[128];
     fifo32_init(&task->fifo, 128, fifobuf, task);
 
     int *fat = (int *)memman_alloc_4k(memman, 4 * 2880);
@@ -15,13 +13,14 @@ void console_task(struct SHEET *sheet, unsigned int memtotal) {
 
     char cmdline[30];
     struct CONSOLE cons;
-    cons.sht         = sheet;
-    cons.cur_x       = 8;
-    cons.cur_y       = 28;
-    cons.cur_c       = -1;
-    *((int *)0x0fec) = (int)&cons;
+    cons.sht   = sheet;
+    cons.cur_x = 8;
+    cons.cur_y = 28;
+    cons.cur_c = -1;
+    // *((int *)0x0fec) = (int)&cons;
+    task->cons = &cons;
 
-    struct TIMER *timer = timer_alloc();
+    cons.timer = timer_alloc();
     timer_init(cons.timer, &task->fifo, 1);
     timer_settime(cons.timer, 50);
 
@@ -266,12 +265,13 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
         char *p = (char *)memman_alloc_4k(memman, finfo->size);
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
         if (finfo->size >= 36 && strncmp(p + 4, "Hari", 4) == 0 && *p == 0x00) {
-            int segsiz      = *((int *)(p + 0x0000));
-            int esp         = *((int *)(p + 0x000c));
-            int datsiz      = *((int *)(p + 0x0010));
-            int datbin      = *((int *)(p + 0x0014));
-            char *q         = (char *)memman_alloc_4k(memman, segsiz);
-            *((int *)0xfe8) = (int)q;
+            int segsiz = *((int *)(p + 0x0000));
+            int esp    = *((int *)(p + 0x000c));
+            int datsiz = *((int *)(p + 0x0010));
+            int datbin = *((int *)(p + 0x0014));
+            char *q    = (char *)memman_alloc_4k(memman, segsiz);
+            // *((int *)0xfe8) = (int)q;
+            task->ds_base = (int)q;
             set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
             set_segmdesc(gdt + 1004, segsiz - 1, (int)q, AR_DATA32_RW + 0x60);
             for (int i = 0; i < datsiz; i++) {
@@ -300,9 +300,9 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
 }
 
 int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax) {
-    int ds_base          = *((int *)0xfe8);
-    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task    = task_now();
+    int ds_base          = task->ds_base;
+    struct CONSOLE *cons = task->cons;
     int *reg             = &eax + 1; /* eaxの次の番地 */
 
     if (edx == 1) {
@@ -419,20 +419,20 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 }
 
 int *inthandler0c(int *esp) {
-    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
+    struct TASK *task    = task_now();
+    struct CONSOLE *cons = task->cons;
     cons_putstr(cons, "INT 0c :\n Stack Exception.");
 
     char s[30];
     sprintf(s, "eip = %x\n", esp[11]);
     cons_putstr(cons, s);
 
-    struct TASK *task = task_now();
     return &(task->tss.esp0); /* 異常終了 */
 }
 
 int *inthandler0d(int *esp) {
-    struct CONSOLE *cons = (struct CONSOLE *)*((int *)0x0fec);
     struct TASK *task    = task_now();
+    struct CONSOLE *cons = task->cons;
     cons_putstr(cons, "INT 0d :\n General Prodtected Exception.");
     return &(task->tss.esp0); /* 異常終了させる */
 }

@@ -99,9 +99,9 @@ haribote.img : ipl.bin hello.bin hello2.bin hello3.bin hello4.bin hello5.bin \
 	mcopy haribote.sys -i haribote.img ::
 	mcopy cat.txt -i haribote.img ::
 	mcopy lines.bin -i haribote.img ::
+	mcopy hello5.bin -i haribote.img ::
 	mcopy walk.bin -i haribote.img ::
 	mcopy noodle.bin -i haribote.img ::
-	mcopy beepup.bin -i haribote.img ::
 	mcopy color.bin -i haribote.img ::
 	mcopy color2.bin -i haribote.img ::
 

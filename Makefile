@@ -68,8 +68,8 @@ lines.bin: line.o a_nasm.o api.ls
 walk.bin: walk.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o walk.o -o walk.bin
 
-# noodle.bin: noodle.o a_nasm.o api.ls mysprintf.o
-# 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o mysprintf.o noodle.o -o noodle.bin
+noodle.bin: noodle.o a_nasm.o api.ls mysprintf.o
+	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o mysprintf.o noodle.o -o noodle.bin
 
 beepup.bin: beepup.o a_nasm.o api.ls
 	gcc -m32 -march=i486 -nostdlib -fno-pic -T api.ls a_nasm.o beepup.o -o beepup.bin

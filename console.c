@@ -5,9 +5,6 @@ void console_task(struct SHEET *sheet, int memtotal)
     struct TASK *task = task_now();
     struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
 
-    int fifobuf[128];
-    fifo32_init(&task->fifo, 128, fifobuf, task);
-
     int *fat = (int *)memman_alloc_4k(memman, 4 * 2880);
     file_readfat(fat, (unsigned char *)(ADR_DISKIMG + 0x000200));
 

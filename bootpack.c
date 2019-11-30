@@ -71,6 +71,7 @@ void HariMain(void)
     struct SHEET *sht_cons[2];
     unsigned char *buf_cons[2];
     struct TASK *task_cons[2];
+    int *cons_fifo[2];
     for (int i = 0; i < 2; i++)
     {
         sht_cons[i] = sheet_alloc(shtctl);
@@ -92,6 +93,8 @@ void HariMain(void)
         task_run(task_cons[i], 2, 2); /*level=2 ,priority=2*/
         sht_cons[i]->task = task_cons[i];
         sht_cons[i]->flags |= 0x20;
+        cons_fifo[i] = (int *)memman_alloc_4k(memman, 128 * 4);
+        fifo32_init(&task_cons[i]->fifo, 128, cons_fifo[i], task_cons[i]);
     }
     /* sht_mouse */
     struct SHEET *sht_mouse = sheet_alloc(shtctl);

@@ -115,7 +115,7 @@ void HariMain(void) {
     int key_shift   = 0;
     int key_leds    = (binfo->leds >> 4) & 7;
     int keycmd_wait = -1;
-    int mmx = -1, mmy = -1;
+    int mmx = -1, mmy = -1, mmx2 = 0;
     struct SHEET *key_win = sht_cons[0];
     keywin_on(key_win);
 
@@ -259,8 +259,9 @@ void HariMain(void) {
                                             keywin_on(key_win);
                                         }
                                         if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21) {
-                                            mmx = mx;
-                                            mmy = my;
+                                            mmx  = mx;
+                                            mmy  = my;
+                                            mmx2 = sht->vx0;
                                         }
                                         if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19) {
                                             /* ✕をクリック*/
@@ -280,8 +281,7 @@ void HariMain(void) {
                         } else {
                             x = mx - mmx;
                             y = my - mmy;
-                            sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
-                            mmx = mx;
+                            sheet_slide(sht, (mmx2 + x + 2) & ~3, sht->vy0 + y);
                             mmy = my;
                         }
                     } else {

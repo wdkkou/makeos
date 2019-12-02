@@ -206,12 +206,27 @@ void sheet_refreshmap(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
             by1 = sht->bysize;
         }
         if (sht->col_inv == -1) {
-            /* 透明色なし用 高速版*/
-            for (int by = by0; by < by1; by++) {
-                int vy = sht->vy0 + by;
-                for (int bx = bx0; bx < bx1; bx++) {
-                    int vx                    = sht->vx0 + bx;
-                    map[vy * ctl->xsize + vx] = sid;
+            if ((sht->vx0 & 3) == 0 && (bx0 & 3) == 0 && (bx1 & 3) == 0) {
+                /* 透明色なし用 高速版 4バイト型 */
+                bx1      = (bx1 - bx0) / 4;
+                int sid4 = sid | sid << 8 | sid << 16 | sid << 24;
+                int *p;
+                for (int by = by0; by < by1; by++) {
+                    int vy = sht->vy0 + by;
+                    int vx = sht->vx0 + bx0;
+                    p      = (int *)&map[vy * ctl->xsize + vx];
+                    for (int bx = 0; bx < bx1; bx++) {
+                        p[bx] = sid4;
+                    }
+                }
+            } else {
+                /*　1バイト型*/
+                for (int by = by0; by < by1; by++) {
+                    int vy = sht->vy0 + by;
+                    for (int bx = bx0; bx < bx1; bx++) {
+                        int vx                    = sht->vx0 + bx;
+                        map[vy * ctl->xsize + vx] = sid;
+                    }
                 }
             }
         } else {

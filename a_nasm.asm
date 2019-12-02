@@ -16,6 +16,7 @@ global api_alloctimer
 global api_inittimer
 global api_settimer
 global api_freetimer
+global api_beep
 
 section .text
 
@@ -215,4 +216,10 @@ api_freetimer:
     mov ebx,[esp+8]
     int 0x40
     pop ebx
+    ret
+
+api_beep: ;void api_beep(int tone);
+    mov edx, 20
+    mov eax, [esp+4] ; tone
+    int 0x40
     ret

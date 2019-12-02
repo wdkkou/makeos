@@ -233,6 +233,8 @@ struct TASK {
     int level, priority;
     struct FIFO32 fifo;
     struct TSS32 tss;
+    struct CONSOLE *cons;
+    int ds_base;
 };
 struct TASKLEVEL {
     int running; /* 動作しているタスクの数 */
@@ -268,11 +270,11 @@ struct CONSOLE {
     int cur_x, cur_y, cur_c;
     struct TIMER *timer;
 };
-void console_task(struct SHEET *sheet, unsigned int memtotal);
+void console_task(struct SHEET *sheet, int memtotal);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);
 void cons_newline(struct CONSOLE *cons);
-void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal);
-void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
+void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal);
+void cmd_mem(struct CONSOLE *cons, int memtotal);
 void cmd_clear(struct CONSOLE *cons);
 void cmd_ls(struct CONSOLE *cons);
 void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline);
@@ -282,6 +284,7 @@ void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
 int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 int *inthandler0d(int *esp);
 int *inthandler0c(int *esp);
+void bin_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 
 /* file.c */
 struct FILEINFO {

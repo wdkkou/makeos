@@ -289,7 +289,7 @@ void HariMain(void) {
                     }
                 }
                 /* なぜか，sht_backをrefreshしないと画面下の方でshtが残る */
-                sheet_refresh(sht_back, 0, 0, 1 * 8, 1);
+                // sheet_refresh(sht_back, 0, 0, 1 * 8, 1);
             }
         }
     }

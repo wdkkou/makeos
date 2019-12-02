@@ -166,6 +166,7 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
             for (int by = by0; by < by1; by++) {
                 int vy = sht->vy0 + by;
                 int bx;
+                /* 前の端数を1バイトずつ */
                 for (bx = bx0; bx < bx1 && (bx & 3) != 0; bx++) {
                     int vx = sht->vx0 + bx;
                     if (map[vy * ctl->xsize + vx] == sid) {
@@ -178,6 +179,7 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
                 int *q = (int *)&vram[vy * ctl->xsize + vx];
                 int *r = (int *)&buf[by * sht->bxsize + bx];
 
+                /* ４の倍数部分 */
                 for (int i = 0; i < byte4_x1; i++) {
                     if (p[i] == sid4) {
                         q[i] = r[i];
@@ -198,6 +200,7 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
                         }
                     }
                 }
+                /* 後ろの端数を１バイトずつ */
                 for (bx += byte4_x1 * 4; bx < bx1; bx++) {
                     int vx = sht->vx0 + bx;
                     if (map[vy * ctl->xsize + vx] == sid) {

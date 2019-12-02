@@ -150,6 +150,7 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
         if (by0 < 0) {
             by0 = 0;
         }
+
         if (bx1 > sht->bxsize) {
             bx1 = sht->bxsize;
         }

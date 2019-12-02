@@ -8,12 +8,12 @@
     GLOBAL  load_gdtr, load_idtr
     GLOBAL  load_cr0, store_cr0
     GLOBAL  load_tr
-    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler27,asm_inthandler20,asm_inthandler0d, asm_inthandler0c
+    GLOBAL  asm_inthandler21, asm_inthandler2c, asm_inthandler20,asm_inthandler0d, asm_inthandler0c
     GLOBAL  asm_end_app
     GLOBAL  memtest_sub
     GLOBAL  farjmp, farcall
     GLOBAL  asm_bin_api, start_app
-    EXTERN  inthandler21, inthandler2c, inthandler27, inthandler20 , inthandler0d, inthandler0c
+    EXTERN  inthandler21, inthandler2c, inthandler20 , inthandler0d, inthandler0c
     EXTERN  bin_api
 
 bits 32
@@ -133,22 +133,6 @@ asm_inthandler21:
         mov ds, ax
         mov es, ax
         call inthandler21
-        pop eax
-        popad
-        pop ds
-        pop es
-        iretd
-
-asm_inthandler27:
-        push es
-        push ds
-        pushad
-        mov eax, esp
-        push eax
-        mov ax, ss
-        mov ds, ax
-        mov es, ax
-        call inthandler27
         pop eax
         popad
         pop ds

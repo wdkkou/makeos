@@ -4,6 +4,7 @@
 
 void keywin_off(struct SHEET *key_win);
 void keywin_on(struct SHEET *key_win);
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
 
 void HariMain(void) {
     struct BOOTINFO *binfo = (struct BOOTINFO *)ADR_BOOTINFO;
@@ -68,32 +69,9 @@ void HariMain(void) {
 
     /* sht_cons */
     struct SHEET *sht_cons[2];
-    unsigned char *buf_cons[2];
-    struct TASK *task_cons[2];
-    int *cons_fifo[2];
-    for (int i = 0; i < 2; i++) {
-        sht_cons[i] = sheet_alloc(shtctl);
-        buf_cons[i] = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
-        sheet_setbuf(sht_cons[i], buf_cons[i], 256, 165, -1);
-        make_window8(buf_cons[i], 256, 165, "console", 0);
-        make_textbox8(sht_cons[i], 8, 28, 240, 128, BLACK);
-        task_cons[i]                          = task_alloc();
-        task_cons[i]->tss.esp                 = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
-        task_cons[i]->tss.eip                 = (int)&console_task;
-        task_cons[i]->tss.es                  = 1 * 8;
-        task_cons[i]->tss.cs                  = 2 * 8;
-        task_cons[i]->tss.ss                  = 1 * 8;
-        task_cons[i]->tss.ds                  = 1 * 8;
-        task_cons[i]->tss.fs                  = 1 * 8;
-        task_cons[i]->tss.gs                  = 1 * 8;
-        *((int *)(task_cons[i]->tss.esp + 4)) = (int)sht_cons[i];
-        *((int *)(task_cons[i]->tss.esp + 8)) = memtotal;
-        task_run(task_cons[i], 2, 2); /*level=2 ,priority=2*/
-        sht_cons[i]->task = task_cons[i];
-        sht_cons[i]->flags |= 0x20;
-        cons_fifo[i] = (int *)memman_alloc_4k(memman, 128 * 4);
-        fifo32_init(&task_cons[i]->fifo, 128, cons_fifo[i], task_cons[i]);
-    }
+    sht_cons[0] = open_console(shtctl, memtotal);
+    sht_cons[1] = 0;
+
     /* sht_mouse */
     struct SHEET *sht_mouse = sheet_alloc(shtctl);
     unsigned char buf_mouse[256];
@@ -103,13 +81,11 @@ void HariMain(void) {
     int my = (binfo->scrny - 28 - 16) / 2;
 
     sheet_slide(sht_back, 0, 0);
-    sheet_slide(sht_cons[1], 56, 6);
-    sheet_slide(sht_cons[0], 8, 2);
+    sheet_slide(sht_cons[0], 32, 4);
     sheet_slide(sht_mouse, mx, my);
     sheet_updown(sht_back, 0);
-    sheet_updown(sht_cons[1], 1);
-    sheet_updown(sht_cons[0], 2);
-    sheet_updown(sht_mouse, 3);
+    sheet_updown(sht_cons[0], 1);
+    sheet_updown(sht_mouse, 2);
 
     int i;
     int key_shift   = 0;
@@ -118,9 +94,10 @@ void HariMain(void) {
     int mmx = -1, mmy = -1, mmx2 = 0;
     int new_mx = -1, new_my = 0;
     int new_wx = 0x7fffffff, new_wy = 0;
+
     struct SHEET *key_win = sht_cons[0];
-    struct SHEET *sht     = 0;
     keywin_on(key_win);
+    struct SHEET *sht = 0;
 
     /* 最初にキーボード状態との食い違いがないように、設定しておくことにする */
     struct FIFO32 keycmd;
@@ -217,7 +194,7 @@ void HariMain(void) {
                     fifo32_put(&keycmd, KEYCMD_LED);
                     fifo32_put(&keycmd, key_leds);
                 }
-                if (i == 256 + 0x2e && key_shift != 0 && task_cons[0]->tss.ss0 != 0) {
+                if (i == 256 + 0x2e && key_shift != 0) {
                     /* shift + c */
                     struct TASK *task = key_win->task;
                     cons_putstr(task->cons, "\nBreak\n");
@@ -225,6 +202,15 @@ void HariMain(void) {
                     task->tss.eax = (int)&(task->tss.esp0);
                     task->tss.eip = (int)asm_end_app;
                     io_sti();
+                }
+                if (i == 256 + 0x3c && key_shift != 0) {
+                    /* shift + f2 */
+                    sht_cons[1] = open_console(shtctl, memtotal);
+                    sheet_slide(sht_cons[1], 32, 4);
+                    sheet_updown(sht_cons[1], shtctl->top);
+                    keywin_off(key_win);
+                    key_win = sht_cons[1];
+                    keywin_on(key_win);
                 }
                 if (i == 256 + 0x57 && shtctl->top > 2) {
                     sheet_updown(shtctl->sheets[1], shtctl->top - 1);
@@ -331,4 +317,31 @@ void keywin_on(struct SHEET *key_win) {
         fifo32_put(&key_win->task->fifo, 2);
     }
     return;
+}
+
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal) {
+    struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
+    struct SHEET *sht     = sheet_alloc(shtctl);
+    unsigned char *buf    = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
+    struct TASK *task     = task_alloc();
+    int *cons_fifo        = (unsigned char *)memman_alloc_4k(memman, 128 * 4);
+    sheet_setbuf(sht, buf, 256, 165, -1);
+    make_window8(buf, 256, 165, "console", 0);
+    make_textbox8(sht, 8, 28, 240, 128, BLACK);
+    task->tss.esp                 = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
+    task->tss.eip                 = (int)&console_task;
+    task->tss.es                  = 1 * 8;
+    task->tss.cs                  = 2 * 8;
+    task->tss.ss                  = 1 * 8;
+    task->tss.ds                  = 1 * 8;
+    task->tss.fs                  = 1 * 8;
+    task->tss.gs                  = 1 * 8;
+    *((int *)(task->tss.esp + 4)) = (int)sht;
+    *((int *)(task->tss.esp + 8)) = memtotal;
+    task_run(task, 2, 2); /*level=2 ,priority=2*/
+    sht->task = task;
+    sht->flags |= 0x20;
+    fifo32_init(&task->fifo, 128, cons_fifo, task);
+
+    return sht;
 }

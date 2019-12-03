@@ -13,7 +13,6 @@ void console_task(struct SHEET *sheet, int memtotal) {
     cons.cur_x = 8;
     cons.cur_y = 28;
     cons.cur_c = -1;
-    // *((int *)0x0fec) = (int)&cons;
     task->cons = &cons;
 
     cons.timer = timer_alloc();
@@ -261,15 +260,12 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
         char *p = (char *)memman_alloc_4k(memman, finfo->size);
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
         if (finfo->size >= 36 && strncmp(p + 4, "Hari", 4) == 0 && *p == 0x00) {
-            int segsiz = *((int *)(p + 0x0000));
-            int esp    = *((int *)(p + 0x000c));
-            int datsiz = *((int *)(p + 0x0010));
-            int datbin = *((int *)(p + 0x0014));
-            char *q    = (char *)memman_alloc_4k(memman, segsiz);
-            // *((int *)0xfe8) = (int)q;
+            int segsiz    = *((int *)(p + 0x0000));
+            int esp       = *((int *)(p + 0x000c));
+            int datsiz    = *((int *)(p + 0x0010));
+            int datbin    = *((int *)(p + 0x0014));
+            char *q       = (char *)memman_alloc_4k(memman, segsiz);
             task->ds_base = (int)q;
-            // set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
-            // set_segmdesc(gdt + 1004, segsiz - 1, (int)q, AR_DATA32_RW + 0x60);
             set_segmdesc(gdt + task->sel / 8 + 1000, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
             set_segmdesc(gdt + task->sel / 8 + 2000, segsiz - 1, (int)q, AR_DATA32_RW + 0x60);
             for (int i = 0; i < datsiz; i++) {

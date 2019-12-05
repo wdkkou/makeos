@@ -150,6 +150,7 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
         if (by0 < 0) {
             by0 = 0;
         }
+
         if (bx1 > sht->bxsize) {
             bx1 = sht->bxsize;
         }
@@ -157,12 +158,64 @@ void sheet_refreshsub(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
             by1 = sht->bysize;
         }
 
-        for (int by = by0; by < by1; by++) {
-            int vy = sht->vy0 + by;
-            for (int bx = bx0; bx < bx1; bx++) {
+        if ((sht->vx0 & 3) == 0) {
+            int byte4_x0 = (bx0 + 3) / 4;
+            int byte4_x1 = bx1 / 4;
+            byte4_x1 -= byte4_x0;
+            int sid4 = sid | sid << 8 | sid << 16 | sid << 24;
+            for (int by = by0; by < by1; by++) {
+                int vy = sht->vy0 + by;
+                int bx;
+                /* 前の端数を1バイトずつ */
+                for (bx = bx0; bx < bx1 && (bx & 3) != 0; bx++) {
+                    int vx = sht->vx0 + bx;
+                    if (map[vy * ctl->xsize + vx] == sid) {
+                        vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx];
+                    }
+                }
                 int vx = sht->vx0 + bx;
-                if (map[vy * ctl->xsize + vx] == sid) {
-                    vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx];
+
+                int *p = (int *)&map[vy * ctl->xsize + vx];
+                int *q = (int *)&vram[vy * ctl->xsize + vx];
+                int *r = (int *)&buf[by * sht->bxsize + bx];
+
+                /* ４の倍数部分 */
+                for (int i = 0; i < byte4_x1; i++) {
+                    if (p[i] == sid4) {
+                        q[i] = r[i];
+                    } else {
+                        int bx2 = bx + i * 4;
+                        int vx  = sht->vx0 + bx2;
+                        if (map[vy * ctl->xsize + vx + 0] == sid) {
+                            vram[vy * ctl->xsize + vx + 0] = buf[by * sht->bxsize + bx2 + 0];
+                        }
+                        if (map[vy * ctl->xsize + vx + 1] == sid) {
+                            vram[vy * ctl->xsize + vx + 1] = buf[by * sht->bxsize + bx2 + 1];
+                        }
+                        if (map[vy * ctl->xsize + vx + 2] == sid) {
+                            vram[vy * ctl->xsize + vx + 2] = buf[by * sht->bxsize + bx2 + 2];
+                        }
+                        if (map[vy * ctl->xsize + vx + 3] == sid) {
+                            vram[vy * ctl->xsize + vx + 3] = buf[by * sht->bxsize + bx2 + 3];
+                        }
+                    }
+                }
+                /* 後ろの端数を１バイトずつ */
+                for (bx += byte4_x1 * 4; bx < bx1; bx++) {
+                    int vx = sht->vx0 + bx;
+                    if (map[vy * ctl->xsize + vx] == sid) {
+                        vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx];
+                    }
+                }
+            }
+        } else {
+            for (int by = by0; by < by1; by++) {
+                int vy = sht->vy0 + by;
+                for (int bx = bx0; bx < bx1; bx++) {
+                    int vx = sht->vx0 + bx;
+                    if (map[vy * ctl->xsize + vx] == sid) {
+                        vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx];
+                    }
                 }
             }
         }
@@ -204,12 +257,38 @@ void sheet_refreshmap(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, in
         if (by1 > sht->bysize) {
             by1 = sht->bysize;
         }
-        for (int by = by0; by < by1; by++) {
-            int vy = sht->vy0 + by;
-            for (int bx = bx0; bx < bx1; bx++) {
-                int vx = sht->vx0 + bx;
-                if (buf[by * sht->bxsize + bx] != sht->col_inv) {
-                    map[vy * ctl->xsize + vx] = sid;
+        if (sht->col_inv == -1) {
+            if ((sht->vx0 & 3) == 0 && (bx0 & 3) == 0 && (bx1 & 3) == 0) {
+                /* 透明色なし用 高速版 4バイト型 */
+                bx1      = (bx1 - bx0) / 4;
+                int sid4 = sid | sid << 8 | sid << 16 | sid << 24;
+                int *p;
+                for (int by = by0; by < by1; by++) {
+                    int vy = sht->vy0 + by;
+                    int vx = sht->vx0 + bx0;
+                    p      = (int *)&map[vy * ctl->xsize + vx];
+                    for (int bx = 0; bx < bx1; bx++) {
+                        p[bx] = sid4;
+                    }
+                }
+            } else {
+                /*　1バイト型*/
+                for (int by = by0; by < by1; by++) {
+                    int vy = sht->vy0 + by;
+                    for (int bx = bx0; bx < bx1; bx++) {
+                        int vx                    = sht->vx0 + bx;
+                        map[vy * ctl->xsize + vx] = sid;
+                    }
+                }
+            }
+        } else {
+            for (int by = by0; by < by1; by++) {
+                int vy = sht->vy0 + by;
+                for (int bx = bx0; bx < bx1; bx++) {
+                    int vx = sht->vx0 + bx;
+                    if (buf[by * sht->bxsize + bx] != sht->col_inv) {
+                        map[vy * ctl->xsize + vx] = sid;
+                    }
                 }
             }
         }

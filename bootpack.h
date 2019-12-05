@@ -24,7 +24,6 @@ void asm_inthandler0d(void);
 void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler2c(void);
-void asm_inthandler27(void);
 void asm_bin_api(void);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
@@ -234,7 +233,7 @@ struct TASK {
     struct FIFO32 fifo;
     struct TSS32 tss;
     struct CONSOLE *cons;
-    int ds_base;
+    int ds_base, cons_stack;
 };
 struct TASKLEVEL {
     int running; /* 動作しているタスクの数 */
@@ -248,7 +247,7 @@ struct TASKCTL {
     struct TASKLEVEL level[MAX_TASKLEVEL];
     struct TASK tasks0[MAX_TASKS];
 };
-
+extern struct TASKCTL *taskctl;
 extern struct TIMER *task_timer;
 struct TASK *task_now(void);
 struct TASK *task_init(struct MEMMAN *memman);
@@ -278,6 +277,9 @@ void cmd_mem(struct CONSOLE *cons, int memtotal);
 void cmd_clear(struct CONSOLE *cons);
 void cmd_ls(struct CONSOLE *cons);
 void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline);
+void cmd_exit(struct CONSOLE *cons, int *fat);
+void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal);
+void cmd_ncst(struct CONSOLE *cons, char *cmdline, int memtotal);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 void cons_putstr(struct CONSOLE *cons, char *s);
 void cons_putstr_len(struct CONSOLE *cons, char *s, int l);
@@ -296,3 +298,7 @@ struct FILEINFO {
 void file_readfat(int *fat, unsigned char *img);
 void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
 struct FILEINFO *file_search(char *name, struct FILEINFO *finfo, int max);
+
+/* bootpack.c */
+struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal);
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);

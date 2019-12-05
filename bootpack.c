@@ -4,6 +4,7 @@
 
 void keywin_off(struct SHEET *key_win);
 void keywin_on(struct SHEET *key_win);
+struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal);
 struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
 void close_constack(struct TASK *task);
 void close_console(struct SHEET *sht);
@@ -309,6 +310,8 @@ void HariMain(void) {
                 sheet_refresh(sht_back, 0, 0, 1 * 8, 1);
             } else if (768 <= i && i <= 1023) {
                 close_console(shtctl->sheets0 + (i - 768));
+            } else if (1024 <= i && i <= 2023) {
+                close_console(taskctl->tasks0 + (i - 1024));
             }
         }
     }
@@ -331,15 +334,10 @@ void keywin_on(struct SHEET *key_win) {
     return;
 }
 
-struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal) {
-    struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
-    struct SHEET *sht     = sheet_alloc(shtctl);
-    unsigned char *buf    = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
-    struct TASK *task     = task_alloc();
-    int *cons_fifo        = (unsigned char *)memman_alloc_4k(memman, 128 * 4);
-    sheet_setbuf(sht, buf, 256, 165, -1);
-    make_window8(buf, 256, 165, "console", 0);
-    make_textbox8(sht, 8, 28, 240, 128, BLACK);
+struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal) {
+    struct MEMMAN *memman         = (struct MEMMAN *)MEM_ADDR;
+    struct TASK *task             = task_alloc();
+    int *cons_fifo                = (unsigned char *)memman_alloc_4k(memman, 128 * 4);
     task->cons_stack              = memman_alloc_4k(memman, 64 * 1024);
     task->tss.esp                 = task->cons_stack + 64 * 1024 - 12;
     task->tss.eip                 = (int)&console_task;
@@ -352,10 +350,19 @@ struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal) {
     *((int *)(task->tss.esp + 4)) = (int)sht;
     *((int *)(task->tss.esp + 8)) = memtotal;
     task_run(task, 2, 2); /*level=2 ,priority=2*/
-    sht->task = task;
-    sht->flags |= 0x20;
     fifo32_init(&task->fifo, 128, cons_fifo, task);
+    return task;
+}
 
+struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal) {
+    struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
+    struct SHEET *sht     = sheet_alloc(shtctl);
+    unsigned char *buf    = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
+    sheet_setbuf(sht, buf, 256, 165, -1);
+    make_window8(buf, 256, 165, "console", 0);
+    make_textbox8(sht, 8, 28, 240, 128, BLACK);
+    sht->task = open_constask(sht, memtotal);
+    sht->flags |= 0x20;
     return sht;
 }
 

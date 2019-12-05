@@ -158,6 +158,8 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal) {
         cmd_ls(cons);
     } else if (strncmp(cmdline, "cat ", 4) == 0) {
         cmd_cat(cons, fat, cmdline);
+    } else if (strcmp(cmdline, "exit") == 0) {
+        cmd_exit(cons, fat);
     } else if (cmdline[0] != 0) {
         if (cmd_app(cons, fat, cmdline) == 0) {
             /* コマンドエラー */
@@ -227,6 +229,21 @@ void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline) {
         cons_putstr(cons, "file not found\n");
     }
     return;
+}
+
+void cmd_exit(struct CONSOLE *cons, int *fat) {
+    struct MENMAN *memman = (struct MEMMAN *)MEM_ADDR;
+    struct TASK *task     = task_now();
+    struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
+    struct FIFO32 *fifo   = (struct FIFO32 *)*((int *)0x0fec);
+    timer_cancel(cons->timer);
+    memman_free_4k(memman, (int)fat, 4 * 2880);
+    io_cli();
+    fifo32_put(fifo, cons->sht - shtctl->sheets0 + 768);
+    io_sti();
+    while (1) {
+        task_sleep(task);
+    }
 }
 
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {

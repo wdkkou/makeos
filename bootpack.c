@@ -36,6 +36,7 @@ void HariMain(void) {
     io_sti(); /* IDTとPICの初期化が終わったのでCPUの割り込み禁止を解除 */
 
     struct FIFO32 fifo;
+    *((int *)0x0fec) = (int)&fifo;
     int fifobuf[128];
     fifo32_init(&fifo, 128, fifobuf, 0);
 
@@ -129,10 +130,15 @@ void HariMain(void) {
         } else {
             i = fifo32_get(&fifo);
             io_sti();
-            if (key_win->flags == 0) {
+            if (key_win != 0 && key_win->flags == 0) {
                 /* windowが閉じられた */
-                key_win = shtctl->sheets[shtctl->top - 1];
-                keywin_on(key_win);
+                if (shtctl->top == 1) {
+                    /* マウスと背景しかない状態 */
+                    key_win = 0;
+                } else {
+                    key_win = shtctl->sheets[shtctl->top - 1];
+                    keywin_on(key_win);
+                }
             }
             /* キーボードデータ */
             if (256 <= i && i < 512) {
@@ -152,11 +158,11 @@ void HariMain(void) {
                         s[0] += 0x20; /* 大文字を小文字に変換 */
                     }
                 }
-                if (s[0] != 0) {
+                if (s[0] != 0 && key_win != 0) {
                     fifo32_put(&key_win->task->fifo, s[0] + 256);
                 }
                 /* tab */
-                if (i == 256 + 0x0f) {
+                if (i == 256 + 0x0f && key_win != 0) {
                     keywin_off(key_win);
                     int height = key_win->height - 1;
                     if (height == 0) {
@@ -192,7 +198,7 @@ void HariMain(void) {
                     fifo32_put(&keycmd, KEYCMD_LED);
                     fifo32_put(&keycmd, key_leds);
                 }
-                if (i == 256 + 0x2e && key_shift != 0) {
+                if (i == 256 + 0x2e && key_shift != 0 && key_win != 0) {
                     /* shift + c */
                     struct TASK *task = key_win->task;
                     cons_putstr(task->cons, "\nBreak\n");
@@ -203,7 +209,9 @@ void HariMain(void) {
                 }
                 if (i == 256 + 0x3c && key_shift != 0) {
                     /* shift + f2 */
-                    keywin_off(key_win);
+                    if (key_win != 0) {
+                        keywin_off(key_win);
+                    }
                     key_win = open_console(shtctl, memtotal);
                     sheet_slide(key_win, 32, 4);
                     sheet_updown(key_win, shtctl->top);
@@ -294,6 +302,8 @@ void HariMain(void) {
                 }
                 /* なぜか，sht_backをrefreshしないと画面下の方でshtが残る */
                 sheet_refresh(sht_back, 0, 0, 1 * 8, 1);
+            } else if (768 <= i && i <= 1023) {
+                close_console(shtctl->sheets0 + (i - 768));
             }
         }
     }

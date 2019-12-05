@@ -164,6 +164,8 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal) {
         cmd_cat(cons, fat, cmdline);
     } else if (strcmp(cmdline, "exit") == 0) {
         cmd_exit(cons, fat);
+    } else if (strncmp(cmdline, "start ", 6) == 0) {
+        cmd_start(cons, cmdline, memtotal);
     } else if (cmdline[0] != 0) {
         if (cmd_app(cons, fat, cmdline) == 0) {
             /* コマンドエラー */
@@ -248,6 +250,20 @@ void cmd_exit(struct CONSOLE *cons, int *fat) {
     while (1) {
         task_sleep(task);
     }
+}
+
+void cmd_start(struct CONSOLE *cons, char *cmdline, int memtotal) {
+    struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
+    struct SHEET *sht     = open_console(shtctl, memtotal);
+    struct FIFO32 *fifo   = &sht->task->fifo;
+    sheet_slide(sht, 32, 4);
+    sheet_updown(sht, shtctl->top);
+    for (int i = 6; cmdline[i] != 0; i++) {
+        fifo32_put(fifo, cmdline[i] + 256);
+    }
+    fifo32_put(fifo, 10 + 256);
+    cons_newline(cons);
+    return;
 }
 
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {

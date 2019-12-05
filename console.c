@@ -53,6 +53,10 @@ void console_task(struct SHEET *sheet, int memtotal) {
                 boxfill8(sheet->buf, sheet->bxsize, BLACK, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
                 cons.cur_c = -1;
             }
+            if (data == 4) {
+                /* コンソールの✕クリック */
+                cmd_exit(&cons, fat);
+            }
             if (256 <= data && data <= 511) { /* キーボードデータ（タスクA経由） */
                 if (data == 8 + 256) {
                     /* バックスペース */

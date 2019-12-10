@@ -4,8 +4,6 @@
 
 void keywin_off(struct SHEET *key_win);
 void keywin_on(struct SHEET *key_win);
-struct TASK *open_constask(struct SHEET *sht, unsigned int memtotal);
-struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
 void close_constack(struct TASK *task);
 void close_console(struct SHEET *sht);
 
@@ -207,6 +205,7 @@ void HariMain(void) {
                     task->tss.eax = (int)&(task->tss.esp0);
                     task->tss.eip = (int)asm_end_app;
                     io_sti();
+                    task_run(task, -1, 0);
                 }
                 if (i == 256 + 0x3c && key_shift != 0) {
                     /* shift + f2 */
@@ -279,6 +278,7 @@ void HariMain(void) {
                                                 task->tss.eax = (int)&(task->tss.esp0);
                                                 task->tss.eip = (int)asm_end_app;
                                                 io_sti();
+                                                task_run(task, -1, 0);
                                             } else {
                                                 struct TASK *task = sht->task;
                                                 io_cli();

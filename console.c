@@ -32,7 +32,7 @@ void console_task(struct SHEET *sheet, int memtotal) {
         } else {
             int data = fifo32_get(&task->fifo);
             io_sti();
-            if (data <= 1) {
+            if (data <= 1 && cons.sht != 0) {
                 if (data != 0) {
                     timer_init(cons.timer, &task->fifo, 0);
                     if (cons.cur_c >= 0) {
@@ -52,7 +52,9 @@ void console_task(struct SHEET *sheet, int memtotal) {
             }
             if (data == 3) /* カーソルOFF */
             {
-                boxfill8(sheet->buf, sheet->bxsize, BLACK, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
+                if (cons.sht != 0) {
+                    boxfill8(cons.sht->buf, cons.sht->bxsize, BLACK, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
+                }
                 cons.cur_c = -1;
             }
             if (data == 4) {
@@ -72,7 +74,7 @@ void console_task(struct SHEET *sheet, int memtotal) {
                     cmdline[cons.cur_x / 8 - 3] = 0;
                     cons_newline(&cons);
                     cons_runcmd(cmdline, &cons, fat, memtotal);
-                    if (sheet == 0) {
+                    if (cons.sht == 0) {
                         cmd_exit(&cons, fat);
                     }
                     cons_putstr(&cons, "$ ");
@@ -85,13 +87,13 @@ void console_task(struct SHEET *sheet, int memtotal) {
                     }
                 }
             }
-            if (sheet != 0) {
+            if (cons.sht != 0) {
                 /* カーソル再表示 */
                 if (cons.cur_c >= 0) {
-                    boxfill8(sheet->buf, sheet->bxsize, cons.cur_c, cons.cur_x,
+                    boxfill8(cons.sht->buf, cons.sht->bxsize, cons.cur_c, cons.cur_x,
                              cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
                 }
-                sheet_refresh(sheet, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
+                sheet_refresh(cons.sht, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
             }
         }
     }
@@ -363,10 +365,12 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
 }
 
 int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax) {
-    struct TASK *task    = task_now();
-    int ds_base          = task->ds_base;
-    struct CONSOLE *cons = task->cons;
-    int *reg             = &eax + 1; /* eaxの次の番地 */
+    struct TASK *task       = task_now();
+    int ds_base             = task->ds_base;
+    struct CONSOLE *cons    = task->cons;
+    struct SHTCTL *shtctl   = (struct SHTCTL *)*((int *)0x0fe4);
+    struct FIFO32 *sys_fifo = (struct FIFO32 *)*((int *)0xfec);
+    int *reg                = &eax + 1; /* eaxの次の番地 */
 
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
@@ -377,9 +381,8 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     } else if (edx == 4) {
         return &(task->tss.esp0);
     } else if (edx == 5) {
-        struct SHTCTL *shtctl = (struct SHTCTL *)*((int *)0x0fe4);
-        struct SHEET *sht     = sheet_alloc(shtctl);
-        sht->task             = task;
+        struct SHEET *sht = sheet_alloc(shtctl);
+        sht->task         = task;
         sht->flags |= 0x10;
         sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
         make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
@@ -448,6 +451,13 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
             }
             if (data == 3) {
                 cons->cur_c = -1;
+            }
+            if (data == 4) {
+                timer_cancel(cons->timer);
+                io_cli();
+                fifo32_put(sys_fifo, cons->sht - shtctl->sheets0 + 2024);
+                cons->sht = 0;
+                io_sti();
             }
             if (256 <= data && data <= 511) {
                 reg[7] = data - 256;

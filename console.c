@@ -15,7 +15,7 @@ void console_task(struct SHEET *sheet, int memtotal) {
     cons.cur_c = -1;
     task->cons = &cons;
 
-    if (sheet != 0) {
+    if (cons.sht != 0) {
         cons.timer = timer_alloc();
         timer_init(cons.timer, &task->fifo, 1);
         timer_settime(cons.timer, 50);

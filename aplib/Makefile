@@ -4,7 +4,7 @@ OBJS_API = api001.o api002.o api003.o api004.o api005.o api006.o \
 			api019.o api020.o
 
 apilib.lib : Makefile $(OBJS_API)
-	ar rcs $@ $(OBJS_API)
+	ar r $@ $(OBJS_API)
 
 %.o: %.asm Makefile
 	nasm -f elf $< -o $@

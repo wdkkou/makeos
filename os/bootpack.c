@@ -4,7 +4,7 @@
 
 void keywin_off(struct SHEET *key_win);
 void keywin_on(struct SHEET *key_win);
-void close_constack(struct TASK *task);
+void close_constask(struct TASK *task);
 void close_console(struct SHEET *sht);
 
 void HariMain(void) {
@@ -197,7 +197,7 @@ void HariMain(void) {
                     fifo32_put(&keycmd, KEYCMD_LED);
                     fifo32_put(&keycmd, key_leds);
                 }
-                if (i == 256 + 0x2e && key_shift != 0 && key_win != 0) {
+                if (i == 256 + 0x3b && key_shift != 0 && key_win != 0) {
                     /* shift + c */
                     struct TASK *task = key_win->task;
                     cons_putstr(task->cons, "\nBreak\n");
@@ -315,7 +315,7 @@ void HariMain(void) {
             } else if (768 <= i && i <= 1023) {
                 close_console(shtctl->sheets0 + (i - 768));
             } else if (1024 <= i && i <= 2023) {
-                close_console(taskctl->tasks0 + (i - 1024));
+                close_constask(taskctl->tasks0 + (i - 1024));
             } else if (2028 <= i && i <= 2279) {
                 struct SHEET *sht2 = shtctl->sheets0 + (i - 2024);
                 memman_free_4k(memman, (int)sht2->buf, 256 * 165);
@@ -374,7 +374,7 @@ struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal) {
     return sht;
 }
 
-void close_constack(struct TASK *task) {
+void close_constask(struct TASK *task) {
     struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
     task_sleep(task);
     memman_free_4k(memman, task->cons_stack, 64 * 1024);
@@ -388,6 +388,6 @@ void close_console(struct SHEET *sht) {
     struct TASK *task     = sht->task;
     memman_free_4k(memman, (int)sht->buf, 256 * 165);
     sheet_free(sht);
-    close_constack(task);
+    close_constask(task);
     return;
 }

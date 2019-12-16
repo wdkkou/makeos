@@ -1,5 +1,6 @@
-#include "api.h"
-#include "bootpack.h"
+#include "../api.h"
+/* mysprintf.c */
+void sprintf(char *str, char *fmt, ...);
 
 void HariMain(void) {
     api_initmalloc();

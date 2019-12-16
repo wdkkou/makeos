@@ -1,4 +1,4 @@
-APP = winhello3
+APP = win3
 STACK = 1k
 MALLOC = 0k
 

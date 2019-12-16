@@ -30,7 +30,7 @@ bootpack.hrb : $(OBJ_ALL) har.ls Makefile
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
 
-haribote.img : ipl.bin haribote.sys Makefile
+haribote.img : ipl.bin haribote.sys
 	mformat -f 1440 -C -B ipl.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
 # コマンド
@@ -43,7 +43,6 @@ img :
 
 run :
 	make img
-	qemu-system-i386 -m 32 -fda haribote.img
 
 clean :
 	rm *.o *.lst hankaku.c conv_hankaku *.hrb *.sys

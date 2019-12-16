@@ -1,4 +1,4 @@
-#include "api.h"
+#include "../api.h"
 
 void HariMain(void) {
     api_initmalloc();

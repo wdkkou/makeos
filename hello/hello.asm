@@ -1,4 +1,9 @@
 bits 32
+    global HariMain
+
+section .text
+
+HariMain:
     mov ecx, msg
     mov edx,1
 putloop:

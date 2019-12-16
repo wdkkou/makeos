@@ -42,7 +42,6 @@ full :
 	$(MAKE) -C color
 	$(MAKE) -C color2
 	$(MAKE) -C os
-	$(MAKE) myos.img
 
 # ファイル生成規則
 os/haribote.img :
@@ -51,7 +50,6 @@ os/haribote.img :
 img : os/haribote.img $(APP_ALL)
 	cp os/haribote.img myos.img
 	mcopy cat.txt -i myos.img ::
-	echo $(APP_ALL)
 	mcopy $(APP_ALL) -i myos.img ::
 
 # コマンド
@@ -68,7 +66,7 @@ clean :
 	rm hello/*.bin hello2/*.bin hello3/*.bin hello4/*.bin hello5/*.bin \
 	color/*.bin color2/*.bin line/*.bin star/*.bin stars/*.bin \
 	walk/*.bin winhello/*.bin winhello2/*.bin winhello3/*.bin
-	rm os.img
+	rm myos.img
 
 debug:
 	make full

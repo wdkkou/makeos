@@ -1,10 +1,4 @@
-int api_openwin(char *buf, int xsize, int ysize, int col_inv, char *titile);
-void api_putstrwin(int win, int x, int y, int col, int len, char *str);
-void api_boxfillwin(int win, int x0, int y0, int x1, int y1, int col);
-void api_initmalloc(void);
-char *api_malloc(int size);
-void api_end(void);
-
+#include "../api.h"
 void HariMain(void) {
     char *buf;
     int win;
@@ -14,5 +8,11 @@ void HariMain(void) {
     win = api_openwin(buf, 150, 50, -1, "hello");
     api_boxfillwin(win, 8, 36, 141, 43, 6);
     api_putstrwin(win, 28, 28, 0, 12, "hello,world");
+
+    while (1) {
+        if (api_getkey(1) == 0x0a) {
+            break;
+        }
+    }
     api_end();
 }

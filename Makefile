@@ -2,11 +2,11 @@ CC := gcc
 CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
 OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o mystrcmp.o graphic.o dsctbl.o int.o \
 				fifo.o mouse.o keyboard.o memory.o sheet.o timer.o mtask.o window.o console.o file.o
-# APP_ALL = hello/hello.bin
-# APP_ALL += hello2/hello2.bin
-# APP_ALL += hello3/hello3.bin
-# APP_ALL += hello4/hello4.bin
-# APP_ALL += hello5/hello5.bin
+APP_ALL = hello/hello.bin
+APP_ALL += hello2/hello2.bin
+APP_ALL += hello3/hello3.bin
+APP_ALL += hello4/hello4.bin
+APP_ALL += hello5/hello5.bin
 APP_ALL += winhello/win.bin
 APP_ALL += winhello2/win2.bin
 APP_ALL += winhello3/win3.bin
@@ -66,6 +66,7 @@ clean :
 	rm hello/*.bin hello2/*.bin hello3/*.bin hello4/*.bin hello5/*.bin \
 	color/*.bin color2/*.bin line/*.bin star/*.bin stars/*.bin \
 	walk/*.bin winhello/*.bin winhello2/*.bin winhello3/*.bin
+	rm apilib/*.o
 	rm myos.img
 
 debug:

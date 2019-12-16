@@ -1,10 +1,4 @@
-int api_openwin(char *buf, int xsize, int ysize, int col_inv, char *titile);
-void api_boxfillwin(int win, int x0, int y0, int x1, int y1, int col);
-void api_initmalloc(void);
-char *api_malloc(int size);
-void api_point(int win, int x, int y, int col);
-void api_end(void);
-void api_refreshwin(int win, int x0, int y0, int x1, int y1);
+#include "../api.h"
 
 unsigned long rand(void);
 
@@ -22,6 +16,12 @@ void HariMain(void) {
         api_point(win + 1, x, y, 3);
     }
     api_refreshwin(win, 6, 26, 144, 94);
+
+    while (1) {
+        if (api_getkey(1) == 0x0a) {
+            break;
+        }
+    }
     api_end();
 }
 

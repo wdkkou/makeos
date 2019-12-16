@@ -1,9 +1,4 @@
-int api_openwin(char *buf, int xsize, int ysize, int col_inv, char *titile);
-void api_boxfillwin(int win, int x0, int y0, int x1, int y1, int col);
-void api_initmalloc(void);
-char *api_malloc(int size);
-void api_point(int win, int x, int y, int col);
-void api_end(void);
+#include "../api.h"
 
 void HariMain(void) {
     char *buf;
@@ -14,5 +9,11 @@ void HariMain(void) {
     win = api_openwin(buf, 150, 100, -1, "stars");
     api_boxfillwin(win, 6, 26, 143, 93, 0);
     api_point(win, 75, 59, 3);
+
+    while (1) {
+        if (api_getkey(1) == 0x0a) {
+            break;
+        }
+    }
     api_end();
 }

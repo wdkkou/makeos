@@ -51,6 +51,7 @@ img : os/haribote.img $(APP_ALL)
 	cp os/haribote.img myos.img
 	mcopy cat.txt -i myos.img ::
 	mcopy $(APP_ALL) -i myos.img ::
+	# mcopy crack/crack7.bin -i myos.img ::
 
 # コマンド
 

@@ -18,6 +18,7 @@ APP_ALL += walk/walk.bin
 # APP_ALL += noodle/noodle.bin
 APP_ALL += color/color.bin
 APP_ALL += color2/color2.bin
+APP_ALL += sosu/sosu.bin
 
 # デフォルト動作
 all :
@@ -42,6 +43,7 @@ full :
 	$(MAKE) -C beepup
 	$(MAKE) -C color
 	$(MAKE) -C color2
+	$(MAKE) -C sosu
 	$(MAKE) -C os
 
 # ファイル生成規則
@@ -67,7 +69,7 @@ clean :
 	rm os/*.o os/*.lst os/hankaku.c os/conv_hankaku os/*.img os/*.hrb
 	rm hello/*.bin hello2/*.bin hello3/*.bin hello4/*.bin hello5/*.bin \
 	color/*.bin color2/*.bin line/*.bin star/*.bin stars/*.bin \
-	walk/*.bin winhello/*.bin winhello2/*.bin winhello3/*.bin
+	walk/*.bin winhello/*.bin winhello2/*.bin winhello3/*.bin sosu/*.bin
 	rm apilib/*.o
 	rm myos.img
 

@@ -15,7 +15,7 @@ APP_ALL += stars/stars.bin
 APP_ALL += line/line.bin
 APP_ALL += walk/walk.bin
 # APP_ALL += beepup/beepup.bin
-APP_ALL += noodle/noodle.bin
+# APP_ALL += noodle/noodle.bin
 APP_ALL += color/color.bin
 APP_ALL += color2/color2.bin
 
@@ -38,7 +38,7 @@ full :
 	$(MAKE) -C stars
 	$(MAKE) -C line
 	$(MAKE) -C walk
-	$(MAKE) -C noodle
+	# $(MAKE) -C noodle
 	$(MAKE) -C beepup
 	$(MAKE) -C color
 	$(MAKE) -C color2

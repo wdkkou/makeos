@@ -182,8 +182,6 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal) {
         cmd_clear(cons);
     } else if (strcmp(cmdline, "ls") == 0 && cons->sht != 0) {
         cmd_ls(cons);
-    } else if (strncmp(cmdline, "cat ", 4) == 0 && cons->sht != 0) {
-        cmd_cat(cons, fat, cmdline);
     } else if (strcmp(cmdline, "exit") == 0) {
         cmd_exit(cons, fat);
     } else if (strncmp(cmdline, "start ", 6) == 0) {
@@ -240,23 +238,6 @@ void cmd_ls(struct CONSOLE *cons) {
                 cons_putstr(cons, s);
             }
         }
-    }
-    return;
-}
-
-void cmd_cat(struct CONSOLE *cons, int *fat, char *cmdline) {
-    /* catコマンド */
-    struct MEMMAN *memman  = (struct MEMMAN *)MEM_ADDR;
-    struct FILEINFO *finfo = file_search(cmdline + 4, (struct FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
-    if (finfo != 0) {
-        /* ファイルが見つかった場合 */
-        char *p = (char *)memman_alloc_4k(memman, finfo->size);
-        file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
-        cons_putstr_len(cons, p, finfo->size);
-        memman_free_4k(memman, (int)p, finfo->size);
-    } else {
-        /* ファイルが見つからなかった場合 */
-        cons_putstr(cons, "file not found\n");
     }
     return;
 }

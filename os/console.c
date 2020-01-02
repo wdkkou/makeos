@@ -21,6 +21,13 @@ void console_task(struct SHEET *sheet, int memtotal) {
         timer_settime(cons.timer, 50);
     }
 
+    struct FILEHANDLE fhandle[8];
+    for (int i = 0; i < 8; i++) {
+        fhandle[i].buf = 0;
+    }
+    task->fhandle = fhandle;
+    task->fat     = fat;
+
     /* プロンプト表示 */
     cons_putstr(&cons, "$ ");
 
@@ -351,6 +358,13 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
                     sheet_free(sht); /* 閉じる */
                 }
             }
+
+            for (int i = 0; i < 8; i++) {
+                if (task->fhandle[i].buf != 0) {
+                    memman_free_4k(memman, (int)task->fhandle[i].buf, task->fhandle[i].size);
+                    task->fhandle[i].buf = 0;
+                }
+            }
             timer_cancelall(&task->fifo);
             memman_free_4k(memman, (int)q, segsiz);
         } else {
@@ -371,6 +385,9 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     struct SHTCTL *shtctl   = (struct SHTCTL *)*((int *)0x0fe4);
     struct FIFO32 *sys_fifo = (struct FIFO32 *)*((int *)0xfec);
     int *reg                = &eax + 1; /* eaxの次の番地 */
+    struct FILEINFO *finfo;
+    struct FILEHANDLE *fh;
+    struct MEMMAN *memman = (struct MEMMAN *)MEM_ADDR;
 
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
@@ -459,7 +476,7 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
                 cons->sht = 0;
                 io_sti();
             }
-            if (256 <= data && data <= 511) {
+            if (data >= 256) {
                 reg[7] = data - 256;
                 return 0;
             }
@@ -486,8 +503,66 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
             sound = io_in8(0x61);
             io_out8(0x61, (sound | 0x03) & 0x0f);
         }
+    } else if (edx == 21) {
+        int index = 8;
+        for (int i = 0; i < 8; i++) {
+            if (task->fhandle[i].buf == 0) {
+                index = i;
+                break;
+            }
+        }
+        fh     = &task->fhandle[index];
+        reg[7] = 0;
+        if (index < 8) {
+            finfo = file_search((char *)ebx + ds_base, (struct FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
+            if (finfo) {
+                reg[7]   = (int)fh;
+                fh->buf  = (char *)memman_alloc_4k(memman, finfo->size);
+                fh->size = finfo->size;
+                fh->pos  = 0;
+                file_loadfile(finfo->clustno, finfo->size, fh->buf, task->fat, (char *)(ADR_DISKIMG + 0x003e00));
+            }
+        }
+    } else if (edx == 22) {
+        fh = (struct FILEHANDLE *)eax;
+        memman_free_4k(memman, (int)fh->buf, fh->size);
+        fh->buf = 0;
+    } else if (edx == 23) {
+        fh = (struct FILEHANDLE *)eax;
+        if (ecx == 0) {
+            fh->pos = ebx;
+        } else if (ecx == 1) {
+            fh->pos += ebx;
+        } else if (ecx == 2) {
+            fh->pos = fh->size + ebx;
+        }
+        if (fh->pos < 0) {
+            fh->pos = 0;
+        }
+        if (fh->pos > fh->size) {
+            fh->pos = fh->size;
+        }
+    } else if (edx == 24) {
+        fh = (struct FILEHANDLE *)eax;
+        if (ecx == 0) {
+            reg[7] = fh->size;
+        } else if (ecx == 1) {
+            reg[7] = fh->pos;
+        } else if (ecx == 2) {
+            reg[7] = fh->pos - fh->size;
+        }
+    } else if (edx == 25) {
+        fh = (struct FILEHANDLE *)eax;
+        int i;
+        for (i = 0; i < ecx; i++) {
+            if (fh->pos == fh->size) {
+                break;
+            }
+            *((char *)ebx + ds_base + i) = fh->buf[fh->pos];
+            fh->pos++;
+        }
+        reg[7] = i;
     }
-
     return 0;
 }
 

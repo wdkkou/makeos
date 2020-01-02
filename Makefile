@@ -20,6 +20,7 @@ APP_ALL += sosu2/sosu2.bin
 APP_ALL += winhello/win.bin
 APP_ALL += winhello2/win2.bin
 APP_ALL += winhello3/win3.bin
+APP_ALL += catipl/catipl.bin
 
 # デフォルト動作
 all :
@@ -46,6 +47,7 @@ full :
 	$(MAKE) -C color2
 	$(MAKE) -C sosu
 	$(MAKE) -C sosu2
+	$(MAKE) -C catipl
 	$(MAKE) -C os
 
 # ファイル生成規則
@@ -56,6 +58,7 @@ img : os/haribote.img $(APP_ALL)
 	cp os/haribote.img myos.img
 	mcopy cat.txt -i myos.img ::
 	mcopy $(APP_ALL) -i myos.img ::
+	mcopy os/ipl.asm -i myos.img ::
 	# mcopy crack/crack7.bin -i myos.img ::
 
 # コマンド

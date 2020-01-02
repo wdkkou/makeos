@@ -17,6 +17,11 @@ void api_inittimer(int timer, int data);
 void api_settimer(int timer, int time);
 void api_end(void);
 void api_beep(int tone);
+int api_fopen(char *fname);
+void api_fclose(int fhandle);
+void api_fseek(int fhandle, int offset, int mode);
+int api_fsize(int fhandle, int mode);
+int api_fread(char *buf, int maxsize, int fhandle);
 
 /* mystrcmp.c */
 int strcmp(char *str1, char *str2);

@@ -21,6 +21,7 @@ APP_ALL += winhello/win.bin
 APP_ALL += winhello2/win2.bin
 APP_ALL += winhello3/win3.bin
 APP_ALL += catipl/catipl.bin
+APP_ALL += cat/cat.bin
 
 # デフォルト動作
 all :
@@ -48,6 +49,7 @@ full :
 	$(MAKE) -C sosu
 	$(MAKE) -C sosu2
 	$(MAKE) -C catipl
+	$(MAKE) -C cat
 	$(MAKE) -C os
 
 # ファイル生成規則

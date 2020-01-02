@@ -7,9 +7,6 @@ APP_ALL += hello2/hello2.bin
 APP_ALL += hello3/hello3.bin
 APP_ALL += hello4/hello4.bin
 APP_ALL += hello5/hello5.bin
-APP_ALL += winhello/win.bin
-APP_ALL += winhello2/win2.bin
-APP_ALL += winhello3/win3.bin
 APP_ALL += star/star.bin
 APP_ALL += stars/stars.bin
 APP_ALL += line/line.bin
@@ -20,6 +17,9 @@ APP_ALL += color/color.bin
 APP_ALL += color2/color2.bin
 APP_ALL += sosu/sosu.bin
 APP_ALL += sosu2/sosu2.bin
+APP_ALL += winhello/win.bin
+APP_ALL += winhello2/win2.bin
+APP_ALL += winhello3/win3.bin
 
 # デフォルト動作
 all :

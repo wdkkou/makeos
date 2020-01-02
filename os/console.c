@@ -9,11 +9,12 @@ void console_task(struct SHEET *sheet, int memtotal) {
 
     char cmdline[30];
     struct CONSOLE cons;
-    cons.sht   = sheet;
-    cons.cur_x = 8;
-    cons.cur_y = 28;
-    cons.cur_c = -1;
-    task->cons = &cons;
+    cons.sht      = sheet;
+    cons.cur_x    = 8;
+    cons.cur_y    = 28;
+    cons.cur_c    = -1;
+    task->cons    = &cons;
+    task->cmdline = cmdline;
 
     if (cons.sht != 0) {
         cons.timer = timer_alloc();
@@ -541,6 +542,19 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
             }
             *((char *)ebx + ds_base + i) = fh->buf[fh->pos];
             fh->pos++;
+        }
+        reg[7] = i;
+    } else if (edx == 26) {
+        int i = 0;
+        while (1) {
+            *((char *)ebx + ds_base + i) = task->cmdline[i];
+            if (task->cmdline[i] == 0) {
+                break;
+            }
+            if (i >= ecx) {
+                break;
+            }
+            i++;
         }
         reg[7] = i;
     }

@@ -104,6 +104,33 @@ void HariMain(void) {
     fifo32_put(&keycmd, KEYCMD_LED);
     fifo32_put(&keycmd, key_leds);
 
+    int *fat;
+    unsigned char *nihongo;
+    struct FILEINFO *finfo;
+    extern char hankaku[4096];
+
+    /* nihongo.fntの読み込み */
+    nihongo = (unsigned char *)memman_alloc_4k(memman, 16 * 256 + 32 * 94 * 47);
+    fat     = (int *)memman_alloc_4k(memman, 4 * 2880);
+    file_readfat(fat, (unsigned char *)(ADR_DISKIMG + 0x000200));
+    finfo = file_search("nihongo.fnt", (struct FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
+    if (finfo) {
+        file_loadfile(finfo->clustno, finfo->size, nihongo,
+                      fat, (char *)(ADR_DISKIMG + 0x003e00));
+    } else {
+        for (int i = 0; i < 16 * 256; i++) {
+            /* フォントがないため半角部分をコピー */
+            nihongo[i] = hankaku[i];
+        }
+        for (int i = 16 * 256; i < 16 * 256 + 32 * 94 * 47; i++) {
+            /* フォントがないため全角部分を0xffで埋める */
+
+            nihongo[i] = 0xff;
+        }
+    }
+    *((int *)0x0fe8) = (int)nihongo;
+    memman_free_4k(memman, (int)fat, 4 * 2880);
+
     for (;;) {
         if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0) {
             /* キーボードコントローラに送るデータがあれば、送る */

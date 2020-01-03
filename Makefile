@@ -2,11 +2,11 @@ CC := gcc
 CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
 OBJ_ALL := bootpack.o hankaku.o nasmfunc.o mysprintf.o mystrcmp.o graphic.o dsctbl.o int.o \
 				fifo.o mouse.o keyboard.o memory.o sheet.o timer.o mtask.o window.o console.o file.o
-APP_ALL = hello/hello.bin
-APP_ALL += hello2/hello2.bin
-APP_ALL += hello3/hello3.bin
-APP_ALL += hello4/hello4.bin
-APP_ALL += hello5/hello5.bin
+# APP_ALL = hello/hello.bin
+# APP_ALL += hello2/hello2.bin
+# APP_ALL += hello3/hello3.bin
+# APP_ALL += hello4/hello4.bin
+# APP_ALL += hello5/hello5.bin
 APP_ALL += star/star.bin
 APP_ALL += stars/stars.bin
 APP_ALL += line/line.bin
@@ -31,11 +31,11 @@ all :
 
 full :
 	$(MAKE) -C apilib
-	$(MAKE) -C hello
-	$(MAKE) -C hello2
-	$(MAKE) -C hello3
-	$(MAKE) -C hello4
-	$(MAKE) -C hello5
+	# $(MAKE) -C hello
+	# $(MAKE) -C hello2
+	# $(MAKE) -C hello3
+	# $(MAKE) -C hello4
+	# $(MAKE) -C hello5
 	$(MAKE) -C winhello
 	$(MAKE) -C winhello2
 	$(MAKE) -C winhello3
@@ -43,13 +43,13 @@ full :
 	$(MAKE) -C stars
 	$(MAKE) -C line
 	$(MAKE) -C walk
-	# $(MAKE) -C noodle
+	$(MAKE) -C noodle
 	$(MAKE) -C beepup
 	$(MAKE) -C color
 	$(MAKE) -C color2
 	$(MAKE) -C sosu
 	$(MAKE) -C sosu2
-	# $(MAKE) -C catipl
+	$(MAKE) -C catipl
 	$(MAKE) -C cat
 	$(MAKE) -C iroha
 	$(MAKE) -C os
@@ -62,9 +62,10 @@ img : os/haribote.img $(APP_ALL)
 	cp os/haribote.img myos.img
 	mcopy cat.txt -i myos.img ::
 	mcopy $(APP_ALL) -i myos.img ::
+	mcopy os/ipl.asm -i myos.img ::
+	mcopy ipl10.nas -i myos.img ::
+	mcopy nihongo.txt -i myos.img ::
 	mcopy fonts/nihongo.fnt -i myos.img ::
-	# mcopy os/ipl.asm -i myos.img ::
-	# mcopy crack/crack7.bin -i myos.img ::
 
 # コマンド
 

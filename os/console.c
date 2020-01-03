@@ -36,6 +36,7 @@ void console_task(struct SHEET *sheet, int memtotal) {
     } else {
         task->langmode = 0;
     }
+    task->langbyte1 = 0;
 
     /* プロンプト表示 */
     cons_putstr(&cons, "$ ");
@@ -169,6 +170,11 @@ void cons_newline(struct CONSOLE *cons) {
         }
     }
     cons->cur_x = 8;
+
+    struct TASK *task = task_now();
+    if (task->langmode == 1 && task->langbyte1 != 0) {
+        cons->cur_x += 8;
+    }
     return;
 }
 void cons_putstr(struct CONSOLE *cons, char *s) {
@@ -371,6 +377,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline) {
             }
             timer_cancelall(&task->fifo);
             memman_free_4k(memman, (int)q, segsiz);
+            task->langbyte1 = 0;
         } else {
             cons_putstr(cons, ".bin file format error");
         }

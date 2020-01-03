@@ -110,11 +110,23 @@ void putfont8(char *vram, int xsize, int x, int y, char c, char *font) {
 
 void putfont8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s) {
     extern char hankaku[4096];
-    while (*s != 0x00) {
-        putfont8(vram, xsize, x, y, c, hankaku + *s * 16);
-        x += 8;
-        s++;
+    struct TASK *task = task_now();
+    char *nihongo     = (char *)*((int *)0x0fe8);
+    if (task->langmode == 0) {
+        while (*s != 0x00) {
+            putfont8(vram, xsize, x, y, c, hankaku + *s * 16);
+            x += 8;
+            s++;
+        }
     }
+    if (task->langmode == 1) {
+        while (*s != 0x00) {
+            putfont8(vram, xsize, x, y, c, nihongo + *s * 16);
+            x += 8;
+            s++;
+        }
+    }
+    return;
 }
 void init_mouse_cursor8(char *mouse, char bc) {
     static char cursor[16][16] = {

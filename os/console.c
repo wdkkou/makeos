@@ -29,6 +29,14 @@ void console_task(struct SHEET *sheet, int memtotal) {
     task->fhandle = fhandle;
     task->fat     = fat;
 
+    unsigned char *nihongo = (char *)*((int *)0x0fe8);
+
+    if (nihongo[4096] != 0xff) {
+        task->langmode = 1;
+    } else {
+        task->langmode = 0;
+    }
+
     /* プロンプト表示 */
     cons_putstr(&cons, "$ ");
 

@@ -61,6 +61,7 @@ void HariMain(void) {
     fifo.task           = task_a;
     task_run(task_a, 1, 2);
     *((int *)0x0fe4) = (int)shtctl;
+    task_a->langmode = 0;
 
     /* sht_back */
     struct SHEET *sht_back = sheet_alloc(shtctl);
@@ -124,7 +125,6 @@ void HariMain(void) {
         }
         for (int i = 16 * 256; i < 16 * 256 + 32 * 94 * 47; i++) {
             /* フォントがないため全角部分を0xffで埋める */
-
             nihongo[i] = 0xff;
         }
     }

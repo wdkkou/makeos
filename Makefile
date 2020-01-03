@@ -65,6 +65,7 @@ img : os/haribote.img $(APP_ALL)
 	mcopy os/ipl.asm -i myos.img ::
 	mcopy ipl10.nas -i myos.img ::
 	mcopy nihongo.txt -i myos.img ::
+	mcopy euc.txt -i myos.img ::
 	mcopy fonts/nihongo.fnt -i myos.img ::
 
 # コマンド

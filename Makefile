@@ -25,6 +25,7 @@ APP_ALL += cat/cat.bin
 APP_ALL += iroha/iroha.bin
 APP_ALL += chklang/chklang.bin
 APP_ALL += notrec/notrec.bin
+APP_ALL += bball/bball.bin
 
 # デフォルト動作
 all :
@@ -56,6 +57,7 @@ full :
 	$(MAKE) -C iroha
 	$(MAKE) -C chklang
 	$(MAKE) -C notrec
+	$(MAKE) -C bball
 	$(MAKE) -C os
 
 # ファイル生成規則
@@ -83,11 +85,11 @@ vdi : myos.img
 
 clean :
 	rm os/*.o os/*.lst os/hankaku.c os/conv_hankaku os/*.img os/*.hrb
+	rm apilib/*.o
+	rm myos.img
 	rm hello/*.bin hello2/*.bin hello3/*.bin hello4/*.bin hello5/*.bin \
 	color/*.bin color2/*.bin line/*.bin star/*.bin stars/*.bin \
 	walk/*.bin winhello/*.bin winhello2/*.bin winhello3/*.bin sosu/*.bin sosu2/*.bin
-	rm apilib/*.o
-	rm myos.img
 
 debug:
 	make full

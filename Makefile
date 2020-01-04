@@ -24,6 +24,7 @@ APP_ALL += winhello3/win3.bin
 APP_ALL += cat/cat.bin
 APP_ALL += iroha/iroha.bin
 APP_ALL += chklang/chklang.bin
+APP_ALL += notrec/notrec.bin
 
 # デフォルト動作
 all :
@@ -54,6 +55,7 @@ full :
 	$(MAKE) -C cat
 	$(MAKE) -C iroha
 	$(MAKE) -C chklang
+	$(MAKE) -C notrec
 	$(MAKE) -C os
 
 # ファイル生成規則

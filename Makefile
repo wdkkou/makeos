@@ -26,6 +26,7 @@ APP_ALL += iroha/iroha.bin
 APP_ALL += chklang/chklang.bin
 APP_ALL += notrec/notrec.bin
 APP_ALL += bball/bball.bin
+APP_ALL += invader/invader.bin
 
 # デフォルト動作
 all :
@@ -58,6 +59,7 @@ full :
 	$(MAKE) -C chklang
 	$(MAKE) -C notrec
 	$(MAKE) -C bball
+	$(MAKE) -C invader
 	$(MAKE) -C os
 
 # ファイル生成規則
@@ -104,6 +106,7 @@ clean :
 	$(MAKE) -C chklang clean
 	$(MAKE) -C notrec clean
 	$(MAKE) -C bball clean
+	$(MAKE) -C invader clean
 	$(MAKE) -C os clean
 	rm myos.img
 

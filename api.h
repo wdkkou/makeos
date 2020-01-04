@@ -24,5 +24,5 @@ int api_fsize(int fhandle, int mode);
 int api_fread(char *buf, int maxsize, int fhandle);
 
 /* mystrcmp.c */
-int strcmp(char *str1, char *str2);
-int strncmp(char *str1, char *str2, int size);
+// int strcmp(char *str1, char *str2);
+// int strncmp(char *str1, char *str2, int size);

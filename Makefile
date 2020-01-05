@@ -27,6 +27,7 @@ APP_ALL += chklang/chklang.bin
 APP_ALL += notrec/notrec.bin
 APP_ALL += bball/bball.bin
 APP_ALL += invader/invader.bin
+# APP_ALL += calc/calc.bin
 
 # デフォルト動作
 all :
@@ -59,6 +60,7 @@ full :
 	$(MAKE) -C chklang
 	$(MAKE) -C notrec
 	$(MAKE) -C bball
+	# $(MAKE) -C calc
 	$(MAKE) -C invader
 	$(MAKE) -C os
 
@@ -106,6 +108,7 @@ clean :
 	$(MAKE) -C notrec clean
 	$(MAKE) -C bball clean
 	$(MAKE) -C invader clean
+	$(MAKE) -C calc clean
 	$(MAKE) -C os clean
 	rm myos.img
 

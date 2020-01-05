@@ -24,6 +24,9 @@ APP_ALL += winhello3/win3.bin
 APP_ALL += cat/cat.bin
 APP_ALL += iroha/iroha.bin
 APP_ALL += chklang/chklang.bin
+APP_ALL += notrec/notrec.bin
+APP_ALL += bball/bball.bin
+APP_ALL += invader/invader.bin
 
 # デフォルト動作
 all :
@@ -45,15 +48,18 @@ full :
 	$(MAKE) -C line
 	$(MAKE) -C walk
 	$(MAKE) -C noodle
-	$(MAKE) -C beepup
+	# $(MAKE) -C beepup
 	$(MAKE) -C color
 	$(MAKE) -C color2
 	$(MAKE) -C sosu
 	$(MAKE) -C sosu2
-	$(MAKE) -C catipl
+	# $(MAKE) -C catipl
 	$(MAKE) -C cat
 	$(MAKE) -C iroha
 	$(MAKE) -C chklang
+	$(MAKE) -C notrec
+	$(MAKE) -C bball
+	$(MAKE) -C invader
 	$(MAKE) -C os
 
 # ファイル生成規則
@@ -80,11 +86,28 @@ vdi : myos.img
 	VBoxManage convertfromraw --format VDI myos.img myos.vdi
 
 clean :
-	rm os/*.o os/*.lst os/hankaku.c os/conv_hankaku os/*.img os/*.hrb
-	rm hello/*.bin hello2/*.bin hello3/*.bin hello4/*.bin hello5/*.bin \
-	color/*.bin color2/*.bin line/*.bin star/*.bin stars/*.bin \
-	walk/*.bin winhello/*.bin winhello2/*.bin winhello3/*.bin sosu/*.bin sosu2/*.bin
-	rm apilib/*.o
+	$(MAKE) -C apilib clean
+	$(MAKE) -C winhello clean
+	$(MAKE) -C winhello2 clean
+	$(MAKE) -C winhello3 clean
+	$(MAKE) -C star clean
+	$(MAKE) -C stars clean
+	$(MAKE) -C line clean
+	$(MAKE) -C walk clean
+	$(MAKE) -C noodle clean
+	# $(MAKE) -C beepup clean
+	$(MAKE) -C color clean
+	$(MAKE) -C color2 clean
+	$(MAKE) -C sosu clean
+	$(MAKE) -C sosu2 clean
+	# $(MAKE) -C catipl clean
+	$(MAKE) -C cat clean
+	$(MAKE) -C iroha clean
+	$(MAKE) -C chklang clean
+	$(MAKE) -C notrec clean
+	$(MAKE) -C bball clean
+	$(MAKE) -C invader clean
+	$(MAKE) -C os clean
 	rm myos.img
 
 debug:

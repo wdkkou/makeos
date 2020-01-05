@@ -426,7 +426,7 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     } else if (edx == 7) {
         struct SHEET *sht = (struct SHEET *)(ebx & 0xfffffffe);
         boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
-        if ((ebx & 1) == 1) {
+        if ((ebx & 1) == 0) {
             sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
         }
     } else if (edx == 8) {
@@ -452,6 +452,16 @@ int *bin_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
         struct SHEET *sht = (struct SHEET *)(ebx & 0xfffffffe);
         bin_api_linewin(sht, eax, ecx, esi, edi, ebp);
         if ((ebx & 1) == 0) {
+            if (eax > esi) {
+                int res = eax;
+                eax     = esi;
+                esi     = res;
+            }
+            if (ecx > edi) {
+                int res = ecx;
+                ecx     = edi;
+                edi     = res;
+            }
             sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
         }
     } else if (edx == 14) {

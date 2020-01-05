@@ -12,7 +12,7 @@ APP_ALL += stars/stars.bin
 APP_ALL += line/line.bin
 APP_ALL += walk/walk.bin
 # APP_ALL += beepup/beepup.bin
-# APP_ALL += noodle/noodle.bin
+APP_ALL += noodle/noodle.bin
 APP_ALL += color/color.bin
 APP_ALL += color2/color2.bin
 APP_ALL += sosu/sosu.bin
@@ -68,12 +68,11 @@ os/haribote.img :
 
 img : os/haribote.img $(APP_ALL)
 	cp os/haribote.img myos.img
-	mcopy cat.txt -i myos.img ::
 	mcopy $(APP_ALL) -i myos.img ::
-	mcopy os/ipl.asm -i myos.img ::
 	mcopy ipl10.nas -i myos.img ::
-	mcopy nihongo.txt -i myos.img ::
-	mcopy euc.txt -i myos.img ::
+	mcopy fonts/cat.txt -i myos.img ::
+	mcopy fonts/euc.txt -i myos.img ::
+	mcopy fonts/sjis.txt -i myos.img ::
 	mcopy fonts/nihongo.fnt -i myos.img ::
 
 # コマンド

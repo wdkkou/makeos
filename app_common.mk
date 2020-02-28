@@ -1,5 +1,6 @@
 CC := gcc
-CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
+# CFLAGS := -c -m32 -march=i486 -nostdlib -fno-pic
+CFLAGS := -c -m32 -march=i486
 
 default : $(APP).bin
 
@@ -13,4 +14,4 @@ $(APP).bin : $(APP).o ./../apilib/apilib.lib $(OBJ_LIBRARIES) Makefile
 	$(CC) $(CFLAGS) $< -o $@
 
 clean :
-	rm *.bin *.o *.lst
+	rm *.bin *.o

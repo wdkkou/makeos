@@ -12,7 +12,7 @@ APP_ALL += stars/stars.bin
 APP_ALL += line/line.bin
 APP_ALL += walk/walk.bin
 # APP_ALL += beepup/beepup.bin
-# APP_ALL += noodle/noodle.bin
+APP_ALL += noodle/noodle.bin
 APP_ALL += color/color.bin
 APP_ALL += color2/color2.bin
 APP_ALL += sosu/sosu.bin
@@ -27,6 +27,7 @@ APP_ALL += chklang/chklang.bin
 APP_ALL += notrec/notrec.bin
 APP_ALL += bball/bball.bin
 APP_ALL += invader/invader.bin
+# APP_ALL += calc/calc.bin
 
 # デフォルト動作
 all :
@@ -59,6 +60,7 @@ full :
 	$(MAKE) -C chklang
 	$(MAKE) -C notrec
 	$(MAKE) -C bball
+	# $(MAKE) -C calc
 	$(MAKE) -C invader
 	$(MAKE) -C os
 
@@ -68,12 +70,11 @@ os/haribote.img :
 
 img : os/haribote.img $(APP_ALL)
 	cp os/haribote.img myos.img
-	mcopy cat.txt -i myos.img ::
 	mcopy $(APP_ALL) -i myos.img ::
-	mcopy os/ipl.asm -i myos.img ::
 	mcopy ipl10.nas -i myos.img ::
-	mcopy nihongo.txt -i myos.img ::
-	mcopy euc.txt -i myos.img ::
+	mcopy fonts/cat.txt -i myos.img ::
+	mcopy fonts/euc.txt -i myos.img ::
+	mcopy fonts/sjis.txt -i myos.img ::
 	mcopy fonts/nihongo.fnt -i myos.img ::
 
 # コマンド
@@ -107,6 +108,7 @@ clean :
 	$(MAKE) -C notrec clean
 	$(MAKE) -C bball clean
 	$(MAKE) -C invader clean
+	$(MAKE) -C calc clean
 	$(MAKE) -C os clean
 	rm myos.img
 

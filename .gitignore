@@ -4,5 +4,6 @@
 *.img
 *.hrb
 *.o
+*.dmp
 conv_hankaku
 hankaku.c
